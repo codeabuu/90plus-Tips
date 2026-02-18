@@ -1,3 +1,4 @@
+// services/revenuecat_service.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -33,7 +34,7 @@ class RevenueCatService {
   bool get isPremium => _isPremium;
   List<Package> get availablePackages => _availablePackages;
 
-  // ✅ IMPROVEMENT 1: Add getter for app_user_id (for webhook reference)
+  // ✅ Get app_user_id for webhook reference
   Future<String> getAppUserId() async {
     if (_currentCustomerInfo != null) {
       return _currentCustomerInfo!.originalAppUserId;
@@ -43,27 +44,34 @@ class RevenueCatService {
     return customerInfo.originalAppUserId;
   }
 
-  // Initialize RevenueCat
+  // Initialize RevenueCat with test API key
   Future<void> initialize() async {
     if (_isInitialized) return;
 
     try {
       await dotenv.load();
       
-      // Configure based on platform
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        await Purchases.setup(dotenv.get('REVENUECAT_GOOGLE_API_KEY'));
-      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-        await Purchases.setup(dotenv.get('REVENUECAT_IOS_API_KEY'));
-      } else {
-        debugPrint('RevenueCat not supported on this platform');
-        return;
-      }
+      // Get API key from .env
+      final apiKey = dotenv.get('REVENUECAT_API_KEY');
+      
+      debugPrint('📱 Initializing RevenueCat with test key...');
+      
+      // Configure with the same key for all platforms in test mode
+      await Purchases.setup(apiKey);
+      
+      // Enable debug logs in test mode
+      Purchases.setLogLevel(LogLevel.debug);
 
-      // ✅ IMPROVEMENT 2: Log the app_user_id for webhook debugging
+      // Set user attributes for testing
+      await Purchases.setAttributes({
+        'test_mode': 'true',
+        'platform': defaultTargetPlatform.toString(),
+      });
+
+      // Get initial customer info
       final initialCustomerInfo = await Purchases.getCustomerInfo();
       debugPrint('📱 RevenueCat initialized. App User ID: ${initialCustomerInfo.originalAppUserId}');
-      debugPrint('📡 Webhook will automatically sync with Django backend');
+      debugPrint('🔧 Running in TEST MODE - No real charges will be made');
 
       // Listen for customer info updates
       Purchases.addCustomerInfoUpdateListener(_onCustomerInfoUpdated);
@@ -75,7 +83,7 @@ class RevenueCatService {
       await fetchPackages();
 
       _isInitialized = true;
-      debugPrint('✅ RevenueCat initialized successfully');
+      debugPrint('✅ RevenueCat initialized successfully in TEST MODE');
     } catch (e) {
       debugPrint('❌ Error initializing RevenueCat: $e');
       rethrow;
@@ -89,8 +97,7 @@ class RevenueCatService {
       _updatePremiumStatus(_currentCustomerInfo!);
       _customerInfoController.add(_currentCustomerInfo!);
       
-      // ✅ IMPROVEMENT 3: Log for webhook tracking
-      debugPrint('🔄 Customer info updated. Webhook will notify Django backend.');
+      debugPrint('🔄 Customer info updated in test mode');
       
       return _currentCustomerInfo!;
     } catch (e) {
@@ -111,6 +118,14 @@ class RevenueCatService {
       if (offering != null) {
         _availablePackages = offering.availablePackages;
         _packagesController.add(_availablePackages);
+        debugPrint('📦 Found ${_availablePackages.length} packages in test mode');
+        
+        // Log package details for debugging
+        for (var package in _availablePackages) {
+          debugPrint('  - ${package.identifier}: ${package.storeProduct.priceString}');
+        }
+      } else {
+        debugPrint('⚠️ No offerings found in test mode');
       }
       
       return _availablePackages;
@@ -123,14 +138,15 @@ class RevenueCatService {
   // Purchase a package
   Future<CustomPurchaseResult> purchasePackage(Package package) async {
     try {
+      debugPrint('🛒 Attempting to purchase: ${package.identifier} in TEST MODE');
+      
       final purchaserInfo = await Purchases.purchasePackage(package);
       _currentCustomerInfo = purchaserInfo.customerInfo;
       _updatePremiumStatus(_currentCustomerInfo!);
       
-      // ✅ Get app_user_id for webhook reference
       final appUserId = _currentCustomerInfo!.originalAppUserId;
-      debugPrint('🎯 Purchase successful! App User ID: $appUserId');
-      debugPrint('📡 RevenueCat webhook will update Django backend automatically');
+      debugPrint('🎯 Test purchase successful! App User ID: $appUserId');
+      debugPrint('🧪 Remember: This is a TEST purchase - no real charge occurred');
       
       return CustomPurchaseResult(
         success: true,
@@ -139,7 +155,7 @@ class RevenueCatService {
       );
     } on PlatformException catch (e) {
       if (e.code == PurchasesErrorCode.purchaseCancelledError.toString()) {
-        debugPrint('Purchase was cancelled by user');
+        debugPrint('Test purchase was cancelled by user');
         return CustomPurchaseResult(
           success: false,
           error: 'Purchase cancelled',
@@ -147,7 +163,7 @@ class RevenueCatService {
         );
       }
 
-      debugPrint('Purchase failed: ${e.message}');
+      debugPrint('Test purchase failed: ${e.message}');
       return CustomPurchaseResult(
         success: false,
         error: e.message ?? 'Unknown error',
@@ -164,11 +180,13 @@ class RevenueCatService {
   // Restore purchases
   Future<RestoreResult> restorePurchases() async {
     try {
+      debugPrint('🔄 Attempting to restore purchases in TEST MODE');
+      
       final customerInfo = await Purchases.restorePurchases();
       _currentCustomerInfo = customerInfo;
       _updatePremiumStatus(_currentCustomerInfo!);
       
-      debugPrint('🔄 Purchases restored. Webhook will update Django');
+      debugPrint('✅ Test purchases restored successfully');
       
       return RestoreResult(
         success: true,
@@ -191,7 +209,7 @@ class RevenueCatService {
     if (newStatus != _isPremium) {
       _isPremium = newStatus;
       _premiumStatusController.add(_isPremium);
-      debugPrint('Premium status changed: $_isPremium');
+      debugPrint('Premium status changed: $_isPremium (TEST MODE)');
     }
   }
 
@@ -201,7 +219,7 @@ class RevenueCatService {
     _updatePremiumStatus(customerInfo);
     _customerInfoController.add(customerInfo);
     
-    debugPrint('📡 Customer info updated via listener. Webhook will sync with Django.');
+    debugPrint('📡 Customer info updated via listener (TEST MODE)');
   }
 
   // Get subscription info

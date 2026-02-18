@@ -2,12 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/predictions_provider.dart';
-import '../widgets/prediction_card.dart'; // Updated to use MatchItem
+import '../widgets/prediction_card.dart';
 import '../theme/app_theme.dart';
-import '../models/league_model.dart'; // Use league_model.dart
+import '../models/league_model.dart';
 
 class LeaguesScreen extends StatefulWidget {
-  const LeaguesScreen({super.key});
+  final Function(int) onNavigate;
+  const LeaguesScreen({super.key, required this.onNavigate});
 
   @override
   State<LeaguesScreen> createState() => _LeaguesScreenState();
@@ -33,6 +34,13 @@ class _LeaguesScreenState extends State<LeaguesScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            // Navigate to Home tab (index 0)
+            widget.onNavigate(0);
+          },
+        ),
         title: const Text('Leagues'),
         actions: [
           IconButton(
@@ -255,11 +263,11 @@ class _LeaguesScreenState extends State<LeaguesScreen> {
           ),
           const SizedBox(height: 12),
           
-          // Match cards - Update to pass matchItem
+          // Match cards
           ...matches.map((matchItem) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: PredictionCard(matchItem: matchItem), // Updated parameter name
+              child: PredictionCard(matchItem: matchItem),
             );
           }).toList(),
         ],

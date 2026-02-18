@@ -1,14 +1,14 @@
+// main.dart (or wherever your MainAppScreen is)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../screens/home_screen.dart';
-import '../screens/today_screen.dart';
+import '../screens/today_tips_screen.dart';
 import '../screens/leagues_screen.dart';
 import '../screens/more_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/predictions_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../theme/app_theme.dart';
-// import '../widgets/upgrade_modal.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,124 +46,133 @@ class MainAppScreen extends StatefulWidget {
 class _MainAppScreenState extends State<MainAppScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    // const TodayScreen(),
-    const LeaguesScreen(),
-    const MoreScreen(),
-  ];
+  late List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      HomeScreen(onNavigate: _navigateToScreen),
+      TodayTipsScreen(onNavigate: _navigateToScreen),
+      LeaguesScreen(onNavigate: _navigateToScreen),
+      MoreScreen(onNavigate: _navigateToScreen),
+    ];
+  }
+
+  void _navigateToScreen(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: _buildBottomNavigationBar(),
+    return WillPopScope(
+      onWillPop: () async {
+        if (_selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0;
+          });
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: _screens,
+        ),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: AppTheme.accentGreen,
+            unselectedItemColor: Colors.grey[600],
+            selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            unselectedLabelStyle: const TextStyle(fontSize: 12),
+            items: [
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.home, size: 24),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: Stack(
+                  children: [
+                    const Icon(Icons.flash_on, size: 24),
+                    Consumer<SubscriptionProvider>(
+                      builder: (context, provider, child) {
+                        if (!provider.isPremium) {
+                          return Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(Icons.lock, size: 8, color: Colors.white),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ],
+                ),
+                label: 'Today',
+              ),
+              BottomNavigationBarItem(
+                icon: Stack(
+                  children: [
+                    const Icon(Icons.leaderboard, size: 24),
+                    Consumer<SubscriptionProvider>(
+                      builder: (context, provider, child) {
+                        if (!provider.isPremium) {
+                          return Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(Icons.lock, size: 8, color: Colors.white),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ],
+                ),
+                label: 'Leagues',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.more_horiz, size: 24),
+                label: 'More',
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          // final isPremium = context.read<SubscriptionProvider>().isPremium;
-          // if ((index == 1 || index == 2) && !isPremium) {
-            // _showUpgradeModal(context);
-          // } else {
-            setState(() {
-              _selectedIndex = index;
-            });
-          // }
-        },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppTheme.accentGreen,
-        unselectedItemColor: Colors.grey[600],
-        selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-        unselectedLabelStyle: const TextStyle(fontSize: 12),
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home, size: 24),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Stack(
-              children: [
-                Icon(Icons.flash_on, size: 24),
-                Consumer<SubscriptionProvider>(
-                  builder: (context, provider, child) {
-                    if (!provider.isPremium) {
-                      return Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Icon(Icons.lock, size: 8, color: Colors.white),
-                        ),
-                      );
-                    }
-                    return SizedBox.shrink();
-                  },
-                ),
-              ],
-            ),
-            label: 'Today',
-          ),
-          BottomNavigationBarItem(
-            icon: Stack(
-              children: [
-                Icon(Icons.leaderboard, size: 24),
-                Consumer<SubscriptionProvider>(
-                  builder: (context, provider, child) {
-                    if (!provider.isPremium) {
-                      return Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Icon(Icons.lock, size: 8, color: Colors.white),
-                        ),
-                      );
-                    }
-                    return SizedBox.shrink();
-                  },
-                ),
-              ],
-            ),
-            label: 'Leagues',
-          ),
-          
-          BottomNavigationBarItem(
-            icon: Icon(Icons.more_horiz, size: 24),
-            label: 'More',
-          ),
-        ],
-      ),
-    );
-  }
-
-  // void _showUpgradeModal(BuildContext context) {
-  //   showModalBottomSheet(
-  //     context: context,
-  //     isScrollControlled: true,
-  //     backgroundColor: Colors.transparent,
-  //     builder: (context) => UpgradeModal(),
-  //   );
-  // }
 }

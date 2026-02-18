@@ -1,15 +1,50 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../screens/contanct_us_screen.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 
 class MoreScreen extends StatefulWidget {
-  const MoreScreen({super.key});
+  final Function(int) onNavigate;
+
+  const MoreScreen({super.key, required this.onNavigate});
+  
 
   @override
   State<MoreScreen> createState() => _MoreScreenState();
 }
 
 class _MoreScreenState extends State<MoreScreen> {
+  void _shareApp() async {
+  const String playStoreUrl =
+      'https://play.google.com/store/apps/details?id=com.troncores.scorewise';
+
+  final String message =
+      "⚽ Winning starts with smart predictions!\n\n"
+      "Get expert football tips, accurate stats & daily matches.\n\n"
+      "Download here 👇\n$playStoreUrl";
+
+  if (kIsWeb) {
+    // For web: just open Play Store link
+    final Uri url = Uri.parse(playStoreUrl);
+    await launchUrl(url);
+  } else {
+    // For Android/iOS
+    await Share.share(message);
+  }
+}
+
+void _rateApp() async {
+  final Uri url = Uri.parse(
+    'https://play.google.com/store/apps/details?id=com.troncores.scorewise',
+  );
+
+  if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+    throw 'Could not launch $url';
+  }
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -128,12 +163,12 @@ class _MoreScreenState extends State<MoreScreen> {
                 _buildSettingsItem(
                   icon: Icons.star,
                   title: 'Rate This App',
-                  onTap: () {},
+                  onTap: _rateApp,
                 ),
                 _buildSettingsItem(
                   icon: Icons.share,
                   title: 'Share App',
-                  onTap: () {},
+                  onTap: _shareApp,
                 ),
               ]),
 

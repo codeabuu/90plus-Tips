@@ -2,7 +2,8 @@
 import 'package:flutter/material.dart';
 import '../widgets/prediction_card.dart';
 import '../services/api_service.dart';
-import '../models/league_model.dart'; // Only need league_model.dart
+import '../models/league_model.dart';
+import '../theme/app_theme.dart'; // Add this to use AppTheme
 
 class PredictionsScreen extends StatefulWidget {
   const PredictionsScreen({super.key});
@@ -17,11 +18,10 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
   // Map to store league predictions
   final Map<String, List<MatchItem>> _leaguePredictions = {};
   
-  // Currently selected league
-  String? _selectedLeague;
+  // Map to track expanded state - all leagues expanded by default
+  final Map<String, bool> _expandedLeagues = {};
   
   // Loading states
-  bool _isLoading = false;
   bool _initialLoading = true;
   String _errorMessage = '';
   
@@ -41,21 +41,21 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
     });
 
     try {
+      // Clear existing data
+      _leaguePredictions.clear();
+      
       // Load all league data
       for (var league in _leagues) {
         try {
           final predictions = await _apiService.getMatchPredictions(league.apiEndpoint);
           if (predictions.isNotEmpty) {
             _leaguePredictions[league.name] = predictions;
+            // Set all leagues with predictions to expanded by default
+            _expandedLeagues[league.name] = true;
           }
         } catch (e) {
           print('Error loading ${league.name}: $e');
         }
-      }
-      
-      // Select first league with predictions by default
-      if (_leaguePredictions.isNotEmpty) {
-        _selectedLeague = _leaguePredictions.keys.first;
       }
       
       setState(() {
@@ -71,12 +71,6 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
   }
 
   Future<void> _refreshLeague(String leagueName) async {
-    if (_isLoading) return;
-    
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
       // Find the endpoint for this league
       final league = _leagues.firstWhere(
@@ -96,16 +90,27 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
         
         setState(() {
           _leaguePredictions[leagueName] = predictions;
-          _isLoading = false;
+          // Ensure the league remains expanded after refresh
+          _expandedLeagues[leagueName] = true;
         });
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to refresh $leagueName';
-        _isLoading = false;
-      });
       print('Error refreshing $leagueName: $e');
+      rethrow;
     }
+  }
+
+  Future<void> _refreshAllLeagues() async {
+    setState(() {
+      _initialLoading = true;
+    });
+    await _loadAllLeagues();
+  }
+
+  void _toggleLeagueExpansion(String leagueName) {
+    setState(() {
+      _expandedLeagues[leagueName] = !(_expandedLeagues[leagueName] ?? false);
+    });
   }
 
   @override
@@ -126,7 +131,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      CircularProgressIndicator(
+                      const CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
                       ),
                       const SizedBox(height: 16),
@@ -183,21 +188,9 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
               )
             else
               Expanded(
-                child: Column(
-                  children: [
-                    // League Selector Dropdown
-                    _buildLeagueSelector(),
-                    
-                    // League Predictions
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: _selectedLeague != null 
-                            ? () => _refreshLeague(_selectedLeague!)
-                            : () async {},
-                        child: _buildPredictionsList(),
-                      ),
-                    ),
-                  ],
+                child: RefreshIndicator(
+                  onRefresh: _refreshAllLeagues,
+                  child: _buildLeaguesList(),
                 ),
               ),
           ],
@@ -255,149 +248,162 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
           // Refresh Button
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.blue),
-            onPressed: _loadAllLeagues,
+            onPressed: _refreshAllLeagues,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLeagueSelector() {
-    final leaguesWithPredictions = _leaguePredictions.keys.toList();
+  Widget _buildLeaguesList() {
+    // Get leagues that have predictions, sorted alphabetically
+    final leaguesWithPredictions = _leaguePredictions.keys.toList()..sort();
     
-    if (leaguesWithPredictions.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        color: Colors.white,
-        child: const Text(
-          'No leagues with predictions available',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey,
-          ),
-        ),
-      );
-    }
-
-    return Container(
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
-      color: Colors.white,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Select a League',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+      itemCount: leaguesWithPredictions.length,
+      itemBuilder: (context, index) {
+        final leagueName = leaguesWithPredictions[index];
+        final matches = _leaguePredictions[leagueName] ?? [];
+        final isExpanded = _expandedLeagues[leagueName] ?? true; // Default to expanded
+        
+        // Get league data from League model
+        final league = _leagues.firstWhere(
+          (l) => l.name == leagueName,
+          orElse: () => League(
+            name: leagueName,
+            country: '',
+            icon: Icons.sports_soccer,
+            color: Colors.grey,
+            description: '',
+            apiEndpoint: '',
           ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _selectedLeague,
-                isExpanded: true,
-                icon: const Icon(Icons.arrow_drop_down, color: Colors.blue),
-                iconSize: 24,
-                elevation: 16,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.black87,
-                ),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedLeague = newValue;
-                  });
-                },
-                items: leaguesWithPredictions.map<DropdownMenuItem<String>>((String leagueName) {
-                  // Find league data
-                  final league = _leagues.firstWhere(
-                    (l) => l.name == leagueName,
-                    orElse: () => League(
-                      name: leagueName,
-                      country: '',
-                      icon: Icons.sports_soccer,
-                      color: Colors.grey,
-                      description: '',
-                      apiEndpoint: '',
-                    ),
-                  );
-                  
-                  final matchCount = _leaguePredictions[leagueName]?.length ?? 0;
-                  
-                  return DropdownMenuItem<String>(
-                    value: leagueName,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+        );
+        
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // League Header - Exactly like LeaguesScreen
+              GestureDetector(
+                onTap: () => _toggleLeagueExpansion(leagueName),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.neutralGray,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      // League Icon with color
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: league.color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          league.icon,
+                          size: 24,
+                          color: league.color,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(league.icon, size: 18, color: league.color),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                leagueName,
-                                style: const TextStyle(fontSize: 14),
+                            Text(
+                              league.name,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primaryNavy,
                               ),
                             ),
                             Text(
-                              '($matchCount)',
-                              style: TextStyle(
+                              league.country,
+                              style: const TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey[600],
+                                color: Colors.grey,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          league.country,
+                      ),
+                      // Match Count Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${matches.length} matches',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue[700],
                           ),
                         ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(
+                        isExpanded ? Icons.expand_less : Icons.expand_more,
+                        color: Colors.grey[600],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+              
+              // Matches List - Only show if expanded
+              if (isExpanded)
+                _buildMatchesList(matches, leagueName, league),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildPredictionsList() {
-    if (_selectedLeague == null || 
-        _leaguePredictions[_selectedLeague] == null || 
-        _leaguePredictions[_selectedLeague]!.isEmpty) {
-      return Center(
+  Widget _buildMatchesList(List<MatchItem> matches, String leagueName, League league) {
+    if (matches.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.event_available, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
+            const Icon(
+              Icons.event_available,
+              size: 48,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 12),
             Text(
-              'No matches available for $_selectedLeague',
+              'No matches available for $leagueName',
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 14,
                 color: Colors.grey,
               ),
-              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             ElevatedButton(
-              onPressed: () => _refreshLeague(_selectedLeague!),
+              onPressed: () => _refreshLeague(leagueName),
               child: const Text('Refresh'),
             ),
           ],
@@ -405,143 +411,78 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
       );
     }
 
-    final predictions = _leaguePredictions[_selectedLeague]!;
-    final league = _leagues.firstWhere(
-      (l) => l.name == _selectedLeague,
-      orElse: () => League(
-        name: _selectedLeague!,
-        country: '',
-        icon: Icons.sports_soccer,
-        color: Colors.grey,
-        description: '',
-        apiEndpoint: '',
-      ),
-    );
-    
-    return ListView(
+    return Padding(
       padding: const EdgeInsets.all(16),
-      children: [
-        // League Header
-        Container(
-          margin: const EdgeInsets.only(bottom: 20),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: league.color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  league.icon,
-                  size: 24,
-                  color: league.color,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      league.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    Text(
-                      league.country,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '${predictions.length} matches',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue[700],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Matches List - FIX THIS LINE: pass matchItem instead of matchPrediction
-        ...predictions.map((matchItem) {
-          return PredictionCard(matchItem: matchItem); // Changed parameter name
-        }).toList(),
-
-        // Footer
-        Container(
-          margin: const EdgeInsets.only(top: 16),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.blue[50],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.lightbulb_outline, color: Colors.blue, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Upcoming Football Predictions',
+      child: Column(
+        children: [
+          // League info header
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue[700], size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${matches.length} matches with expert predictions',
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                      fontSize: 12,
+                      color: Colors.blue[700],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Looking for accurate football predictions today? At ScoreWise, our experts provide daily football prediction tips & insights covering all major leagues.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                  height: 1.5,
                 ),
-              ),
-              const SizedBox(height: 16),
-              if (_isLoading)
-                const Center(
-                  child: CircularProgressIndicator(),
+                // Add a small refresh button for this league
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 18),
+                  color: Colors.blue[700],
+                  onPressed: () => _refreshLeague(leagueName),
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(4),
                 ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-      ],
+          const SizedBox(height: 12),
+          
+          // Match cards
+          ...matches.map((matchItem) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: PredictionCard(matchItem: matchItem),
+            );
+          }).toList(),
+          
+          // Footer for this league - only show if there are matches
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.trending_up, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Expert analysis and predictions for ${league.name}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
