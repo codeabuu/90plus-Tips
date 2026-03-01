@@ -138,15 +138,16 @@ class SubscriptionProvider with ChangeNotifier {
   
   // Get subscription period
   String getSubscriptionPeriod(Package package) {
-    final identifier = package.identifier.toLowerCase();
-    
-    if (identifier.contains('monthly')) return 'per month';
-    if (identifier.contains('yearly')) return 'per year';
-    if (identifier.contains('weekly')) return 'per week';
-    if (identifier.contains('lifetime')) return 'one-time';
-    
-    return '';
-  }
+  final identifier = package.identifier.toLowerCase();
+  
+  if (identifier.contains('week')) return 'per week';
+  if (identifier.contains('month')) return 'per month';
+  if (identifier.contains('3month') || identifier.contains('three_month')) return 'per 3 months';
+  if (identifier.contains('year') || identifier.contains('annual')) return 'per year';
+  if (identifier.contains('lifetime')) return 'one-time';
+  
+  return '';
+}
   
   // Calculate savings for yearly vs monthly
   String? calculateSavings(Package monthly, Package yearly) {

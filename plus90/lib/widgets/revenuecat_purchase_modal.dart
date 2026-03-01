@@ -12,7 +12,7 @@ class RevenueCatPurchaseModal extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.cardBackground, // Changed from Colors.white to AppTheme.cardBackground
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -43,7 +43,7 @@ class RevenueCatPurchaseModal extends StatelessWidget {
                 color: AppTheme.accentGreen.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.workspace_premium,
                 size: 32,
                 color: AppTheme.accentGreen,
@@ -53,7 +53,7 @@ class RevenueCatPurchaseModal extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Title
-            const Text(
+            Text(
               'Go Premium',
               style: TextStyle(
                 fontSize: 24,
@@ -80,7 +80,9 @@ class RevenueCatPurchaseModal extends StatelessWidget {
             Consumer<SubscriptionProvider>(
               builder: (context, provider, child) {
                 if (!provider.isInitialized || provider.isLoading) {
-                  return const CircularProgressIndicator();
+                  return CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentGreen),
+                  );
                 }
 
                 if (provider.packages.isEmpty) {
@@ -107,8 +109,7 @@ class RevenueCatPurchaseModal extends StatelessWidget {
 
             // Features
             _buildFeature('50+ daily predictions'),
-            _buildFeature('All leagues & competitions'),
-            _buildFeature('Advanced statistics'),
+            _buildFeature('Major leagues & competitions'),
             _buildFeature('Accumulator builder'),
             _buildFeature('Instant notifications'),
 
@@ -123,14 +124,16 @@ class RevenueCatPurchaseModal extends StatelessWidget {
                       : () async {
                           final result = await provider.restorePurchases();
                           
+                          if (!context.mounted) return;
+                          
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(result.success
                                   ? 'Purchases restored successfully!'
                                   : result.error ?? 'Failed to restore purchases'),
                               backgroundColor: result.success
-                                  ? Colors.green
-                                  : Colors.red,
+                                  ? AppTheme.accentGreen
+                                  : AppTheme.mutedRed,
                             ),
                           );
                           
@@ -138,7 +141,12 @@ class RevenueCatPurchaseModal extends StatelessWidget {
                             Navigator.pop(context);
                           }
                         },
-                  child: const Text('Restore Purchases'),
+                  child: Text(
+                    'Restore Purchases',
+                    style: TextStyle(
+                      color: AppTheme.primaryNavy,
+                    ),
+                  ),
                 );
               },
             ),
@@ -146,7 +154,7 @@ class RevenueCatPurchaseModal extends StatelessWidget {
             const SizedBox(height: 8),
 
             // Terms and Privacy
-            const Text(
+            Text(
               'Subscription automatically renews unless canceled. Cancel anytime.',
               style: TextStyle(
                 fontSize: 10,
@@ -161,59 +169,91 @@ class RevenueCatPurchaseModal extends StatelessWidget {
   }
 
   Widget _buildPricingPlans(BuildContext context, SubscriptionProvider provider) {
-    // Find packages
-    final monthlyPackage = provider.packages.firstWhere(
-      (pkg) => pkg.identifier.contains('monthly'),
-      orElse: () => provider.packages.first,
-    );
+    // Find packages by keywords, not exact identifiers
+    Package? weeklyPackage;
+    Package? monthlyPackage;
+    Package? threeMonthPackage;
+    Package? yearlyPackage;
     
-    final yearlyPackage = provider.packages.firstWhere(
-      (pkg) => pkg.identifier.contains('yearly'),
-      orElse: () => provider.packages.length > 1 ? provider.packages[1] : monthlyPackage,
-    );
-    
-    final savings = provider.calculateSavings(monthlyPackage, yearlyPackage);
+    for (var pkg in provider.packages) {
+      final id = pkg.identifier.toLowerCase();
+      
+      if (id.contains('week')) {
+        weeklyPackage = pkg;
+      } else if (id.contains('month') && !id.contains('3month') && !id.contains('three')) {
+        monthlyPackage = pkg;
+      } else if (id.contains('3month') || id.contains('three_month')) {
+        threeMonthPackage = pkg;
+      } else if (id.contains('year') || id.contains('annual')) {
+        yearlyPackage = pkg;
+      }
+    }
 
-    return Column(
-      children: [
-        // Yearly Plan
-        _buildPlanCard(
-          context: context,
-          provider: provider,
-          package: yearlyPackage,
-          title: 'Yearly',
-          subtitle: 'Best Value',
-          isRecommended: true,
-          savings: savings,
-        ),
+    // Calculate savings for yearly vs monthly if both exist
+    String? savings;
+    if (monthlyPackage != null && yearlyPackage != null) {
+      savings = provider.calculateSavings(monthlyPackage, yearlyPackage);
+    }
 
-        const SizedBox(height: 12),
-
-        // Monthly Plan
-        _buildPlanCard(
-          context: context,
-          provider: provider,
-          package: monthlyPackage,
-          title: 'Monthly',
-          subtitle: 'Flexible',
-          isRecommended: false,
-        ),
-
-        // Lifetime Plan (if available)
-        if (provider.packages.any((pkg) => pkg.identifier.contains('lifetime'))) ...[
-          const SizedBox(height: 12),
-          _buildPlanCard(
-            context: context,
-            provider: provider,
-            package: provider.packages.firstWhere(
-              (pkg) => pkg.identifier.contains('lifetime'),
-            ),
-            title: 'Lifetime',
-            subtitle: 'One-time Purchase',
-            isRecommended: false,
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 420),
+      child: Scrollbar(
+        thumbVisibility: true,
+        thickness: 6,
+        radius: const Radius.circular(10),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            children: [
+              if (weeklyPackage != null) ...[
+                _buildPlanCard(
+                  context: context,
+                  provider: provider,
+                  package: weeklyPackage,
+                  title: 'Weekly',
+                  subtitle: 'Try before you commit',
+                  isRecommended: false,
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (monthlyPackage != null) ...[
+                _buildPlanCard(
+                  context: context,
+                  provider: provider,
+                  package: monthlyPackage,
+                  title: 'Monthly',
+                  subtitle: 'Flexible',
+                  isRecommended: false,
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (threeMonthPackage != null) ...[
+                _buildPlanCard(
+                  context: context,
+                  provider: provider,
+                  package: threeMonthPackage,
+                  title: '3 Months',
+                  subtitle: 'Popular choice',
+                  isRecommended: true, // Changed to true for 3-month plan
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (yearlyPackage != null) ...[
+                _buildPlanCard(
+                  context: context,
+                  provider: provider,
+                  package: yearlyPackage,
+                  title: 'Yearly',
+                  subtitle: 'Best Value',
+                  isRecommended: true,
+                  savings: savings,
+                ),
+              ],
+              const SizedBox(height: 8),
+            ],
           ),
-        ],
-      ],
+        ),
+      ),
     );
   }
 
@@ -231,10 +271,10 @@ class RevenueCatPurchaseModal extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.cardBackground, // Changed from Colors.white
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isRecommended ? AppTheme.accentGreen : Colors.grey[300]!,
+            color: isRecommended ? AppTheme.accentGreen : AppTheme.neutralGray, // Changed from Colors.grey[300]!
             width: isRecommended ? 2 : 1,
           ),
           boxShadow: [
@@ -254,7 +294,7 @@ class RevenueCatPurchaseModal extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppTheme.accentGreen,
+                    color: AppTheme.accentGold, // Changed from accentGreen to accentGold for savings badge
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -262,7 +302,7 @@ class RevenueCatPurchaseModal extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: AppTheme.primaryNavy, // Changed to navy for better contrast on gold
                     ),
                   ),
                 ),
@@ -294,15 +334,15 @@ class RevenueCatPurchaseModal extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (isRecommended)
+                    if (isRecommended && savings == null) // Only show RECOMMENDED for 3-month plan
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppTheme.accentGreen.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text(
-                          'RECOMMENDED',
+                        child: Text(
+                          'POPULAR', // Changed from RECOMMENDED to POPULAR
                           style: TextStyle(
                             fontSize: 8,
                             fontWeight: FontWeight.w700,
@@ -371,10 +411,10 @@ class RevenueCatPurchaseModal extends StatelessWidget {
                   ? 'Purchase cancelled'
                   : result.error ?? 'Purchase failed'),
           backgroundColor: result.success
-              ? Colors.green
+              ? AppTheme.accentGreen
               : result.isCancelled
-                  ? Colors.orange
-                  : Colors.red,
+                  ? AppTheme.accentGold
+                  : AppTheme.mutedRed,
         ),
       );
       
@@ -389,7 +429,11 @@ class RevenueCatPurchaseModal extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          const Icon(Icons.check_circle, size: 20, color: AppTheme.accentGreen),
+          Icon(
+            Icons.check_circle, 
+            size: 20, 
+            color: AppTheme.accentGreen,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

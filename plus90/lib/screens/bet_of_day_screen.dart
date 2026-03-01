@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../models/betofday_model.dart';
+import '../providers/subscription_provider.dart';
 
 class BetOfDayScreen extends StatefulWidget {
   const BetOfDayScreen({super.key});

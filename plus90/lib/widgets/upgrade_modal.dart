@@ -1,6 +1,7 @@
+// upgrade_modal.dart
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../widgets/revenuecat_purchase_modal.dart';
+import 'revenuecat_purchase_modal.dart';
 
 class UpgradeModal extends StatelessWidget {
   const UpgradeModal({super.key});
@@ -26,5 +27,5 @@ class UpgradeModal extends StatelessWidget {
         ),
       ],
     );
-  }
+  } 
 }

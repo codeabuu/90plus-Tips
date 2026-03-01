@@ -49,7 +49,7 @@ class RevenueCatService {
     if (_isInitialized) return;
 
     try {
-      await dotenv.load();
+      await dotenv.load(fileName: kIsWeb ? 'assets/.env' : '.env');
       
       // Get API key from .env
       final apiKey = dotenv.get('REVENUECAT_API_KEY');

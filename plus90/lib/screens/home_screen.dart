@@ -15,6 +15,8 @@ import 'leagues_screen.dart';
 import 'free_tips_screen.dart';
 import '../services/api_service.dart';
 import '../models/league_model.dart';
+import '../widgets/upgrade_modal.dart';
+import '../providers/subscription_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int) onNavigate;
@@ -39,46 +41,77 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final predictionsProvider = context.watch<PredictionsProvider>();
+ @override
+Widget build(BuildContext context) {
+  final predictionsProvider = context.watch<PredictionsProvider>();
+  final subscriptionProvider = context.watch<SubscriptionProvider>();
 
-    return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () => _refreshData(predictionsProvider),
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const HeroSection(),
-                const SizedBox(height: 24),
-                
-                _FreeTipsDropdown(
-                  isExpanded: _isFreeTipsExpanded,
-                  isLoading: _isLoadingFreeTips,
-                  tips: _freeTips,
-                  onToggle: _toggleFreeTips,
-                  onNavigate: widget.onNavigate,
-                ),
-                
-                const SizedBox(height: 24),
-                _PredictionCategoriesSection(provider: predictionsProvider, onNavigate: widget.onNavigate,),
-                const SizedBox(height: 32),
-                const _PerformanceSection(),
-                const SizedBox(height: 32),
-                const _TrustSignalSection(),
-                const SizedBox(height: 32),
-                const _ResponsibleGamblingFooter(),
-                const SizedBox(height: 32),
-              ],
+  // Full hero height = 200, sticky bar height = 56 (icon 24 + padding 12*2 + a bit)
+  const double heroMax = 200;
+  const double heroMin = 56;
+
+  return Scaffold(
+    body: SafeArea(
+      child: RefreshIndicator(
+        onRefresh: () => _refreshData(predictionsProvider),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // ── Sticky Hero ──────────────────────────────────────
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: HeroSliverDelegate (
+                maxExtent: heroMax,
+                minExtent: heroMin,
+              ),
             ),
-          ),
+
+            // ── Rest of content as a single sliver ───────────────
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 24),
+                  _FreeTipsDropdown(
+                    isExpanded: _isFreeTipsExpanded,
+                    isLoading: _isLoadingFreeTips,
+                    tips: _freeTips,
+                    onToggle: _toggleFreeTips,
+                    onNavigate: widget.onNavigate,
+                  ),
+                  const SizedBox(height: 24),
+                  _PredictionCategoriesSection(
+                    provider: predictionsProvider,
+                    onNavigate: widget.onNavigate,
+                    isPremium: subscriptionProvider.isPremium,
+                    onUpgradeTap: _showUpgradeModal,
+                  ),
+                  const SizedBox(height: 32),
+                  const _PerformanceSection(),
+                  const SizedBox(height: 32),
+                  const _TrustSignalSection(),
+                  const SizedBox(height: 32),
+                  const _ResponsibleGamblingFooter(),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
+// Add this method to show upgrade modal
+void _showUpgradeModal() {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => const UpgradeModal(),
+  );
+}
 
   Future<void> _refreshData(PredictionsProvider provider) async {
     await provider.fetchAllPredictions();
@@ -585,11 +618,92 @@ class _FreeTipRow extends StatelessWidget {
   }
 }
 
+class _LiveIndicator extends StatefulWidget {
+  const _LiveIndicator();
+
+  @override
+  State<_LiveIndicator> createState() => _LiveIndicatorState();
+}
+
+class _LiveIndicatorState extends State<_LiveIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+    
+    _animation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _animation,
+      child: Container(
+        margin: const EdgeInsets.only(left: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.red.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.red.withOpacity(0.5),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Text(
+              'LIVE',
+              style: TextStyle(
+                color: Colors.red,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _PredictionCategoriesSection extends StatelessWidget {
   final PredictionsProvider provider;
   final Function(int) onNavigate;
+  final bool isPremium; // Add this
+  final VoidCallback onUpgradeTap; // Add this
 
-  const _PredictionCategoriesSection({required this.provider, required this.onNavigate});
+  const _PredictionCategoriesSection({
+    required this.provider, 
+    required this.onNavigate,
+    required this.isPremium, // Required
+    required this.onUpgradeTap, // Required
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -598,9 +712,16 @@ class _PredictionCategoriesSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Browse Predictions',
-            style: Theme.of(context).textTheme.displaySmall,
+          // Title with LIVE indicator on the right
+          Row(
+            children: [
+              Text(
+                'Browse Predictions',
+                style: Theme.of(context).textTheme.displaySmall,
+              ),
+              const Spacer(),
+              const _LiveIndicator(), // Blinking LIVE indicator
+            ],
           ),
           const SizedBox(height: 16),
           GridView.count(
@@ -617,22 +738,61 @@ class _PredictionCategoriesSection extends StatelessWidget {
     );
   }
 
+  
+
   List<Widget> _buildCategoryCards(BuildContext context) {
+
+    String tipOfDayOdds = '';
+    if (provider.betOfDayAccumulator != null) {
+      final odds = provider.betOfDayAccumulator!.totalOdds;
+      tipOfDayOdds = odds.toStringAsFixed(2);
+    }
     return [
+      // Free Tips - Always Free
+      // _CategoryCard(
+      //   title: 'Free Tips',
+      //   subtitle: 'Top tips',
+      //   icon: Icons.card_giftcard,
+      //   color: AppTheme.accentGreen,
+      //   onTap: () {
+      //     Navigator.push(
+      //       context,
+      //       MaterialPageRoute(builder: (context) => const FreeTipsScreen()),
+      //     );
+      //   },
+      // ),
+
+      // Today's Tips
       _CategoryCard(
         title: 'Todays Tips',
         subtitle: 'Featured ⭐⭐⭐⭐⭐\n',
         icon: Icons.whatshot,
         color: AppTheme.accentGold,
-        onTap: () => onNavigate(1),
+        onTap: () {
+          if (isPremium) {
+            onNavigate(1);
+          } else {
+            onUpgradeTap();
+          }
+        },
       ),
+
+      // Predictions
       _CategoryCard(
         title: 'Predictions',
         subtitle: 'Live predictions',
         icon: Icons.whatshot,
         color: AppTheme.accentGold,
-        onTap: () => _navigate(context, const PredictionsScreen()),
+        onTap: () {
+          if (isPremium) {
+            _navigate(context, const PredictionsScreen());
+          } else {
+            onUpgradeTap();
+          }
+        },
       ),
+
+      // Tip of Day
       _CategoryCard(
         title: 'Tip of Day',
         subtitle: provider.betOfDayAccumulator == null
@@ -640,8 +800,17 @@ class _PredictionCategoriesSection extends StatelessWidget {
             : '${provider.betOfDayAccumulator!.count} matches',
         icon: Icons.star,
         color: AppTheme.accentGold,
-        onTap: () => _navigate(context, const BetOfDayScreen()),
+        odds: tipOfDayOdds.isNotEmpty ? tipOfDayOdds : null,
+        onTap: () {
+          if (isPremium) {
+            _navigate(context, const BetOfDayScreen());
+          } else {
+            onUpgradeTap();
+          }
+        },
       ),
+
+      // Multi Combinations
       _CategoryCard(
         title: 'Multi Combinations',
         subtitle: provider.dailyAccumulator == null
@@ -649,8 +818,16 @@ class _PredictionCategoriesSection extends StatelessWidget {
             : '${provider.dailyAccumulator!.count} matches',
         icon: Icons.sports_soccer,
         color: const Color(0xFF2196F3),
-        onTap: () => _navigate(context, const DailyAccumulatorScreen()),
+        onTap: () {
+          if (isPremium) {
+            _navigate(context, const DailyAccumulatorScreen());
+          } else {
+            onUpgradeTap();
+          }
+        },
       ),
+
+      // BTTS & Win
       _CategoryCard(
         title: 'BTTS & Win',
         subtitle: provider.bttsWinAccumulator == null
@@ -658,8 +835,16 @@ class _PredictionCategoriesSection extends StatelessWidget {
             : '${provider.bttsWinAccumulator!.count} matches',
         icon: Icons.sports_soccer,
         color: const Color(0xFF2196F3),
-        onTap: () => _navigate(context, const BttsWinScreen()),
+        onTap: () {
+          if (isPremium) {
+            _navigate(context, const BttsWinScreen());
+          } else {
+            onUpgradeTap();
+          }
+        },
       ),
+
+      // BTTS
       _CategoryCard(
         title: 'BTTS',
         subtitle: provider.bttsAccumulator == null
@@ -667,8 +852,16 @@ class _PredictionCategoriesSection extends StatelessWidget {
             : '${provider.bttsAccumulator!.count} matches',
         icon: Icons.sports_soccer,
         color: const Color(0xFF2196F3),
-        onTap: () => _navigate(context, const BttsScreen()),
+        onTap: () {
+          if (isPremium) {
+            _navigate(context, const BttsScreen());
+          } else {
+            onUpgradeTap();
+          }
+        },
       ),
+
+      // Over 2.5
       _CategoryCard(
         title: 'Over 2.5',
         subtitle: provider.over25GoalsAccumulator == null
@@ -676,14 +869,28 @@ class _PredictionCategoriesSection extends StatelessWidget {
             : '${provider.over25GoalsAccumulator!.count} matches',
         icon: Icons.trending_up,
         color: const Color(0xFFFF9800),
-        onTap: () => _navigate(context, const Over25GoalsScreen()),
+        onTap: () {
+          if (isPremium) {
+            _navigate(context, const Over25GoalsScreen());
+          } else {
+            onUpgradeTap();
+          }
+        },
       ),
+
+      // Leagues
       _CategoryCard(
         title: 'Leagues',
         subtitle: 'By competition',
         icon: Icons.emoji_events,
         color: const Color(0xFFE91E63),
-        onTap: () => onNavigate(2),
+        onTap: () {
+          if (isPremium) {
+            onNavigate(2);
+          } else {
+            onUpgradeTap();
+          }
+        },
       ),
     ];
   }
@@ -698,6 +905,7 @@ class _CategoryCard extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final Color color;
+  final String? odds;
   final VoidCallback onTap;
 
   const _CategoryCard({
@@ -705,71 +913,229 @@ class _CategoryCard extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.color,
+    this.odds,
     required this.onTap,
   });
 
+  // Dynamic odds color based on value
+  Color _getOddsColor(String oddsString) {
+    double? value = double.tryParse(oddsString);
+    if (value == null) return Colors.amber.shade600; // Default amber
+
+    if (value < 1.50) return const Color(0xFF00C853); // Emerald
+    if (value < 2.00) return const Color(0xFF64DD17); // Light Green
+    if (value < 3.00) return const Color(0xFFFFD600); // Gold
+    if (value < 5.00) return const Color(0xFFFF9100); // Orange
+    return const Color(0xFFFF5252); // Red for 5.0+
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool showOdds = odds != null && odds!.isNotEmpty;
+    final Color oddsColor = showOdds ? _getOddsColor(odds!) : Colors.amber.shade600;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
           border: Border.all(color: color.withOpacity(0.1), width: 1),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          padding: const EdgeInsets.all(12),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, size: 24, color: color),
+              // Icon with integrated odds
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          color.withOpacity(0.8),
+                          color,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 28,
+                      color: Colors.white,
+                    ),
+                  ),
+                  
+                  // Odds chip with dynamic color
+                  if (showOdds)
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              oddsColor.withOpacity(0.9),
+                              oddsColor,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: oddsColor.withOpacity(0.4),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.stars_rounded,
+                              size: 10,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              odds!,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              const SizedBox(height: 4),
+              
+              const SizedBox(height: 12),
+              
+              // Title
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.primaryNavy,
+                  letterSpacing: 0.3,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'View Tips',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+              
+              const SizedBox(height: 6),
+              
+              // Subtitle with gradient background for featured items
+              if (title == 'Tip of Day' || title == 'Todays Tips')
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
                   ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        color.withOpacity(0.1),
+                        color.withOpacity(0.2),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                )
+              else
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              
+              const SizedBox(height: 12),
+              
+              // Sleek "View" button
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: color.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'View',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: color,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 8,
+                      color: color,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -807,11 +1173,11 @@ class _PerformanceSection extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatItem('Win Rate', '73%', Icons.trending_up),
+                _buildStatItem('Win Rate', '96.4%', Icons.trending_up),
                 _buildDivider(),
-                _buildStatItem('Total Tips', '500+', Icons.list_alt),
+                _buildStatItem('Total Tips 2026', '1600+', Icons.list_alt),
                 _buildDivider(),
-                _buildStatItem('This Week', '45', Icons.calendar_today),
+                _buildStatItem('This Week', '200+', Icons.calendar_today),
               ],
             ),
           ),

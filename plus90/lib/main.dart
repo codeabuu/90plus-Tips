@@ -1,17 +1,24 @@
-// main.dart (or wherever your MainAppScreen is)
+// main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../screens/home_screen.dart';
-import '../screens/today_tips_screen.dart';
-import '../screens/leagues_screen.dart';
-import '../screens/more_screen.dart';
-import '../providers/auth_provider.dart';
-import '../providers/predictions_provider.dart';
-import '../providers/subscription_provider.dart';
-import '../theme/app_theme.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'screens/home_screen.dart';
+import 'screens/today_tips_screen.dart';
+import 'screens/leagues_screen.dart';
+import 'screens/more_screen.dart';
+import 'providers/auth_provider.dart';
+import 'providers/predictions_provider.dart';
+import 'providers/subscription_provider.dart';
+import 'theme/app_theme.dart';
+import 'widgets/upgrade_modal.dart';
 
-void main() {
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load environment variables
+  await dotenv.load();
+  
   runApp(const MyApp());
 }
 
@@ -45,18 +52,28 @@ class MainAppScreen extends StatefulWidget {
 
 class _MainAppScreenState extends State<MainAppScreen> {
   int _selectedIndex = 0;
-
   late List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize subscription provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeSubscription();
+    });
+
     _screens = [
       HomeScreen(onNavigate: _navigateToScreen),
       TodayTipsScreen(onNavigate: _navigateToScreen),
       LeaguesScreen(onNavigate: _navigateToScreen),
       MoreScreen(onNavigate: _navigateToScreen),
     ];
+  }
+
+  Future<void> _initializeSubscription() async {
+    final subscriptionProvider = context.read<SubscriptionProvider>();
+    await subscriptionProvider.initialize();
   }
 
   void _navigateToScreen(int index) {
@@ -66,9 +83,27 @@ class _MainAppScreenState extends State<MainAppScreen> {
   }
 
   void _onItemTapped(int index) {
+    // Check if premium is required for Today and Leagues tabs
+    if (index == 1 || index == 2) {
+      final subscriptionProvider = context.read<SubscriptionProvider>();
+      if (!subscriptionProvider.isPremium) {
+        _showUpgradeModal(context);
+        return;
+      }
+    }
+    
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  void _showUpgradeModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const UpgradeModal(),
+    );
   }
 
   @override

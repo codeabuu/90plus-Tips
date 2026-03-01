@@ -30,9 +30,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
-  # Only include if these folders actually exist with files
-  # assets:
-  #   - assets/images/
-  #   - assets/icons/
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/.env
   
-  # REMOVE fonts section since you're using google_fonts package
