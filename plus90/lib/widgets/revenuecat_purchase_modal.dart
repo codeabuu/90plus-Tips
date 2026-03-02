@@ -257,147 +257,231 @@ class RevenueCatPurchaseModal extends StatelessWidget {
     );
   }
 
-  Widget _buildPlanCard({
-    required BuildContext context,
-    required SubscriptionProvider provider,
-    required Package package,
-    required String title,
-    required String subtitle,
-    required bool isRecommended,
-    String? savings,
-  }) {
-    return GestureDetector(
-      onTap: () => _purchasePackage(context, provider, package),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.cardBackground, // Changed from Colors.white
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isRecommended ? AppTheme.accentGreen : AppTheme.neutralGray, // Changed from Colors.grey[300]!
-            width: isRecommended ? 2 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+Widget _buildPlanCard({
+  required BuildContext context,
+  required SubscriptionProvider provider,
+  required Package package,
+  required String title,
+  required String subtitle,
+  required bool isRecommended,
+  String? savings,
+}) {
+  
+  // Check if package has a free trial
+  String? trialText;
+  Color? trialColor;
+  
+  if (package.storeProduct.introductoryPrice != null) {
+    final introPrice = package.storeProduct.introductoryPrice!;
+    if (introPrice.price == 0.0) {
+      // Parse period string (e.g., "P7D" = 7 days, "P1M" = 1 month)
+      String period = introPrice.period;
+      
+      if (period.contains('D')) {
+        final days = period.replaceAll('P', '').replaceAll('D', '');
+        trialText = '$days-day free trial';
+        trialColor = Colors.blue;
+      } else if (period.contains('W')) {
+        final weeks = period.replaceAll('P', '').replaceAll('W', '');
+        trialText = '$weeks-week free trial';
+        trialColor = Colors.purple;
+      } else if (period.contains('M')) {
+        final months = period.replaceAll('P', '').replaceAll('M', '');
+        trialText = '$months-month free trial';
+        trialColor = Colors.orange;
+      }
+    }
+  }
+
+  return GestureDetector(
+    onTap: () => _purchasePackage(context, provider, package),
+    child: Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: trialText != null 
+              ? trialColor!.withOpacity(0.5) 
+              : (isRecommended ? AppTheme.accentGreen : AppTheme.neutralGray),
+          width: trialText != null ? 2 : (isRecommended ? 2 : 1),
         ),
-        child: Stack(
-          children: [
-            if (isRecommended && savings != null)
-              Positioned(
-                top: -8,
-                right: -8,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentGold, // Changed from accentGreen to accentGold for savings badge
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    savings,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.primaryNavy, // Changed to navy for better contrast on gold
-                    ),
+        boxShadow: [
+          BoxShadow(
+            color: trialText != null 
+                ? trialColor!.withOpacity(0.1)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Savings Badge (top-right)
+          if (isRecommended && savings != null)
+            Positioned(
+              top: -8,
+              right: -8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentGold,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  savings,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primaryNavy,
                   ),
                 ),
               ),
-            
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.primaryNavy,
-                          ),
-                        ),
-                        Text(
-                          subtitle,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (isRecommended && savings == null) // Only show RECOMMENDED for 3-month plan
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppTheme.accentGreen.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'POPULAR', // Changed from RECOMMENDED to POPULAR
-                          style: TextStyle(
-                            fontSize: 8,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.accentGreen,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                
-                const SizedBox(height: 16),
-                
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          provider.getFormattedPrice(package),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.primaryNavy,
-                          ),
-                        ),
-                        Text(
-                          provider.getSubscriptionPeriod(package),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                    ElevatedButton(
-                      onPressed: () => _purchasePackage(context, provider, package),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accentGreen,
-                        foregroundColor: AppTheme.primaryNavy,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('Select'),
-                    ),
-                  ],
-                ),
-              ],
             ),
-          ],
-        ),
+          
+          // Free Trial Badge (top-left)
+          if (trialText != null)
+            Positioned(
+              top: -8,
+              left: -8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      trialColor!.withOpacity(0.8),
+                      trialColor,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: trialColor.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.card_giftcard,
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      trialText,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.primaryNavy,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (isRecommended && savings == null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'POPULAR',
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.accentGreen,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              
+              const SizedBox(height: 16),
+              
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        provider.getFormattedPrice(package),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.primaryNavy,
+                        ),
+                      ),
+                      Text(
+                        provider.getSubscriptionPeriod(package),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _purchasePackage(context, provider, package),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: trialText != null 
+                          ? trialColor 
+                          : AppTheme.accentGreen,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      trialText != null ? 'Try Free' : 'Select',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Future<void> _purchasePackage(BuildContext context, SubscriptionProvider provider, Package package) async {
     final result = await provider.purchasePackage(package);

@@ -10,6 +10,7 @@ import '../models/goalscorer_model.dart';
 import '../models/over2.5_goals_model.dart';
 import '../models/league_model.dart';
 import '../providers/predictions_provider.dart';
+import 'dart:io';
 
 
 class ApiService {
@@ -463,27 +464,61 @@ Future<List<MatchItem>> fetchLeagueMatches(String endpoint) async {
   }
 
   Future<bool> submitContactMessage({
-    required String name,
-    required String email,
-    required String category,
-    required String message,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/contact-us/'),
-        headers: _headers,
-        body: json.encode({
-          'name': name,
-          'email': email,
-          'category': category,
-          'message': message,
-        }),
-      );
-
-      return response.statusCode == 200;
-    } catch (e) {
-      print('Error submitting contact form: $e');
-      return false;
+  required String name,
+  required String email,
+  required String category,
+  required String message,
+  File? attachment, // Add this optional parameter
+}) async {
+  try {
+    // Create multipart request for file upload
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/api/contact-us/'),
+    );
+    
+    // Add headers
+    request.headers.addAll({
+      'Accept': 'application/json',
+      // Don't set Content-Type here - multipart sets its own boundary
+    });
+    
+    // Add form fields
+    request.fields['name'] = name;
+    request.fields['email'] = email;
+    request.fields['category'] = category;
+    request.fields['message'] = message;
+    
+    // Add attachment if provided
+    if (attachment != null) {
+      // Check if file exists
+      if (await attachment.exists()) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'attachment',
+            attachment.path,
+            filename: attachment.path.split('/').last,
+          ),
+        );
+        print('📎 Attachment added: ${attachment.path}');
+      } else {
+        print('⚠️ Attachment file does not exist');
+      }
     }
+    
+    // Send request
+    print('📤 Sending contact form with attachment...');
+    var streamedResponse = await request.send();
+    var response = await http.Response.fromStream(streamedResponse);
+    
+    print('📥 Response status: ${response.statusCode}');
+    print('📥 Response body: ${response.body}');
+    
+    return response.statusCode == 200;
+    
+  } catch (e) {
+    print('❌ Error submitting contact form: $e');
+    return false;
   }
+}
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import 'dart:io';
 
 class ContactUsScreen extends StatefulWidget {
   const ContactUsScreen({super.key});
@@ -21,6 +23,11 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
   String _selectedCategory = 'General';
   bool _isSubmitting = false;
   bool _isSuccess = false;
+  
+  // File attachment
+  File? _selectedFile;
+  String? _fileName;
+  bool _isPickingFile = false;
 
   final List<String> _categories = [
     'General',
@@ -50,6 +57,53 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
     _emailController.dispose();
     _messageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickFile() async {
+    setState(() {
+      _isPickingFile = true;
+    });
+
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowMultiple: false,
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'gif'],
+      );
+
+      if (result != null) {
+        setState(() {
+          _selectedFile = File(result.files.single.path!);
+          _fileName = result.files.single.name;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('File attached: $_fileName'),
+            backgroundColor: AppTheme.accentGreen,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error picking file: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isPickingFile = false;
+      });
+    }
+  }
+
+  void _removeFile() {
+    setState(() {
+      _selectedFile = null;
+      _fileName = null;
+    });
   }
 
   @override
@@ -137,52 +191,10 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
               action: 'Visit Help Center',
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
             const Divider(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
-            // About Our Predictions
-            const Text(
-              'About Our Predictions',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.primaryNavy,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Our tips come from expert analysts with 10+ years experience '
-              'using statistical models and form analysis. We track our '
-              'performance transparently.',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.primaryNavy,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: () {
-                    // View methodology
-                  },
-                  child: const Text('View Our Methodology'),
-                ),
-                const SizedBox(width: 16),
-                TextButton(
-                  onPressed: () {
-                    // View success rates
-                  },
-                  child: const Text('See Success Rates'),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 32),
-            const Divider(),
-            const SizedBox(height: 32),
 
             // Contact Form
             if (!_isSuccess)
@@ -287,20 +299,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
 
-                    // Attach Screenshot
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.attach_file),
-                          onPressed: () {
-                            // Attach file
-                          },
-                        ),
-                        const Text('Attach screenshot (optional)'),
-                      ],
-                    ),
                     const SizedBox(height: 24),
 
                     // Submit Button
@@ -402,11 +401,14 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
         _isSubmitting = true;
       });
 
+      // TODO: Update your ApiService to handle file attachments
+      // For now, just send the text message
       final success = await _apiService.submitContactMessage(
         name: _nameController.text,
         email: _emailController.text,
         category: _selectedCategory,
         message: _messageController.text,
+        // file: _selectedFile, // Add this when ApiService is updated
       );
 
       setState(() {
@@ -416,6 +418,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
 
       if (success) {
         _messageController.clear();
+        _removeFile(); // Clear attached file
         // Auto-clear form after success
         Future.delayed(const Duration(seconds: 5), () {
           if (mounted) {

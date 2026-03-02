@@ -4,6 +4,8 @@ import '../screens/contanct_us_screen.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../screens/Helpcenterscreen.dart';
+import '../screens/successrate_screen.dart';
 
 
 class MoreScreen extends StatefulWidget {
@@ -120,16 +122,16 @@ void _rateApp() async {
                   ),
                   onTap: () {},
                 ),
-                _buildSettingsItem(
-                  icon: Icons.dark_mode,
-                  title: 'Dark Mode',
-                  trailing: Switch(
-                    value: false,
-                    onChanged: (value) {},
-                    activeColor: AppTheme.accentGreen,
-                  ),
-                  onTap: null,
-                ),
+                // _buildSettingsItem(
+                //   icon: Icons.dark_mode,
+                //   title: 'Dark Mode',
+                //   trailing: Switch(
+                //     value: false,
+                //     onChanged: (value) {},
+                //     activeColor: AppTheme.accentGreen,
+                //   ),
+                //   onTap: null,
+                // ),
                 _buildSettingsItem(
                   icon: Icons.text_snippet,
                   title: 'Our Methodology',
@@ -138,16 +140,30 @@ void _rateApp() async {
                 _buildSettingsItem(
                   icon: Icons.bar_chart,
                   title: 'Success Rates',
-                  onTap: () {},
+                  onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SuccessRatesScreen(),
+                    ),
+                  );
+                },
                 ),
               ]),
 
-              _buildSettingsSection(context, 'SUPPORT', [
-                _buildSettingsItem(
-                  icon: Icons.help,
-                  title: 'Help Center',
-                  onTap: () {},
-                ),
+             _buildSettingsSection(context, 'SUPPORT', [
+              _buildSettingsItem(
+                icon: Icons.help,
+                title: 'Help Center',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const HelpCenterScreen(),
+                    ),
+                  );
+                },
+              ),
                 _buildSettingsItem(
                   icon: Icons.contact_support,
                   title: 'Contact Us',
