@@ -22,15 +22,36 @@ class Over25GoalsAccumulator extends BaseAccumulator {
         );
 
   factory Over25GoalsAccumulator.fromJson(Map<String, dynamic> json) {
+    // Parse total_odds - remove " Odds" text and convert to double
+    double parsedTotalOdds = 0.0;
+    if (json['total_odds'] != null) {
+      String totalOddsStr = json['total_odds'].toString();
+      // Simple replace to remove " Odds" text
+      totalOddsStr = totalOddsStr.replaceAll(' Odds', '');
+      parsedTotalOdds = double.tryParse(totalOddsStr) ?? 0.0;
+    }
+    
+    // Parse total_odds_raw - ensure it's a double
+    double parsedRawOdds = 0.0;
+    if (json['total_odds_raw'] != null) {
+      if (json['total_odds_raw'] is num) {
+        parsedRawOdds = (json['total_odds_raw'] as num).toDouble();
+      } else {
+        parsedRawOdds = double.tryParse(json['total_odds_raw'].toString()) ?? 0.0;
+      }
+    }
+
     return Over25GoalsAccumulator(
-      totalOdds: double.parse(json['total_odds'].toString().replaceAll(' Odds', '')),
-      matches: (json['matches'] as List)
-          .map((match) => Over25GoalsMatch.fromJson(match))
-          .toList(),
-      totalOddsRaw: double.parse(json['total_odds_raw']?.toString() ?? '0'),
+      totalOdds: parsedTotalOdds,
+      matches: (json['matches'] as List?)
+              ?.map((match) => Over25GoalsMatch.fromJson(match))
+              .toList() ?? [],
+      totalOddsRaw: parsedRawOdds,
       type: json['type'] ?? 'Over 2.5 Goals Accumulator',
-      scrapedAt: DateTime.parse(json['scraped_at']),
-      count: json['count'] ?? 0,
+      scrapedAt: json['scraped_at'] != null 
+          ? DateTime.parse(json['scraped_at']) 
+          : DateTime.now(),
+      count: json['count'] ?? (json['matches']?.length ?? 0),
       cached: json['cached'] ?? false,
     );
   }
@@ -49,7 +70,7 @@ class Over25GoalsMatch extends BaseMatch {
     return Over25GoalsMatch(
       date: json['date'] ?? '',
       matchTitle: json['match_title'] ?? '',
-      teams: (json['teams'] as List?)?.cast<String>() ?? [],
+      teams: (json['teams'] as List?)?.map((e) => e.toString()).toList() ?? [],
       prediction: json['prediction'] ?? '',
       matchUrl: json['match_url'] ?? '',
     );
