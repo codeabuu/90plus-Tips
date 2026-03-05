@@ -1,9 +1,8 @@
-// widgets/prediction_card.dart
 import 'package:flutter/material.dart';
-import '../models/league_model.dart'; // Use MatchItem from here
+import '../models/league_model.dart';
 
 class PredictionCard extends StatelessWidget {
-  final MatchItem matchItem; // Change from matchPrediction to matchItem
+  final MatchItem matchItem;
 
   const PredictionCard({
     super.key,
@@ -12,11 +11,14 @@ class PredictionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Colors.blue; // MaterialColor for shades
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: primaryColor.shade100, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -32,7 +34,7 @@ class PredictionCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue[50],
+              color: primaryColor.shade50,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(12),
                 topRight: Radius.circular(12),
@@ -45,13 +47,13 @@ class PredictionCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        matchItem.teams.isNotEmpty 
-                            ? matchItem.teams 
+                        matchItem.teams.isNotEmpty
+                            ? matchItem.teams
                             : '${matchItem.homeTeam} vs ${matchItem.awayTeam}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: primaryColor.shade900,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -68,7 +70,7 @@ class PredictionCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.blue[100],
+                    color: primaryColor.shade100,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -76,7 +78,7 @@ class PredictionCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.blue[800],
+                      color: primaryColor.shade700,
                     ),
                   ),
                 ),

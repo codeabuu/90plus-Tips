@@ -110,16 +110,20 @@ class TodayTipCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+  color: Colors.white,
+  borderRadius: BorderRadius.circular(16),
+  border: Border.all(
+    color: tipType.color.withOpacity(0.5), // slightly more visible than inner shades
+    width: 2, // thick enough to notice but not overpower
+  ),
+  boxShadow: [
+    BoxShadow(
+      color: tipType.color.withOpacity(0.1), // subtle colored shadow for depth
+      blurRadius: 12,
+      offset: const Offset(0, 4),
+    ),
+  ],
+),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Material(

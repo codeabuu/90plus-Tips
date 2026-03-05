@@ -62,7 +62,7 @@ class HeroSection extends StatelessWidget {
                       'Premium Predictions',
                       style: Theme.of(context).textTheme.displayLarge!.copyWith(
                             color: Colors.white,
-                            fontSize: 24,
+                            fontSize: 20,
                           ),
                     ),
                     const Spacer(),
@@ -290,7 +290,7 @@ class StickyHeroHeader extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           color: statusColor.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: statusColor.withOpacity(0.3),
             width: 1,

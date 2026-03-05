@@ -236,7 +236,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  "Today's Tips | Predictions | Leagues",
+                  "All available predictions per league",
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
