@@ -25,6 +25,16 @@ class MatchPrediction {
           .toList() ?? [],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'teams': teams,
+      'date': date,
+      'home_team': homeTeam,
+      'away_team': awayTeam,
+      'predictions': predictions.map((p) => p.toJson()).toList(),
+    };
+  }
 }
 
 class PredictionItem {
@@ -44,5 +54,12 @@ class PredictionItem {
       odds: (json['odds'] ?? 0).toDouble(),
       analysis: json['analysis'],
     );
+  }
+  Map<String, dynamic> toJson() {
+    return {
+      'prediction': prediction,
+      'odds': odds,
+      'analysis': analysis,
+    };
   }
 }

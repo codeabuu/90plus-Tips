@@ -26,7 +26,6 @@ class Over25GoalsAccumulator extends BaseAccumulator {
     double parsedTotalOdds = 0.0;
     if (json['total_odds'] != null) {
       String totalOddsStr = json['total_odds'].toString();
-      // Simple replace to remove " Odds" text
       totalOddsStr = totalOddsStr.replaceAll(' Odds', '');
       parsedTotalOdds = double.tryParse(totalOddsStr) ?? 0.0;
     }
@@ -55,6 +54,19 @@ class Over25GoalsAccumulator extends BaseAccumulator {
       cached: json['cached'] ?? false,
     );
   }
+
+  // Add toJson method
+  Map<String, dynamic> toJson() {
+    return {
+      'total_odds': totalOdds.toString(),
+      'matches': matches.map((match) => match.toJson()).toList(),
+      'total_odds_raw': totalOddsRaw,
+      'type': type,
+      'scraped_at': scrapedAt.toIso8601String(),
+      'count': count,
+      'cached': cached,
+    };
+  }
 }
 
 class Over25GoalsMatch extends BaseMatch {
@@ -74,5 +86,16 @@ class Over25GoalsMatch extends BaseMatch {
       prediction: json['prediction'] ?? '',
       matchUrl: json['match_url'] ?? '',
     );
+  }
+
+  // Add toJson method
+  Map<String, dynamic> toJson() {
+    return {
+      'date': date,
+      'match_title': matchTitle,
+      'teams': teams,
+      'prediction': prediction,
+      'match_url': matchUrl,
+    };
   }
 }

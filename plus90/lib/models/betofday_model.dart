@@ -34,6 +34,18 @@ class BetOfDayAccumulator extends BaseAccumulator {
       cached: json['cached'] ?? false,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'total_odds': totalOdds.toString(),
+      'matches': matches.map((match) => match.toJson()).toList(),
+      'total_odds_raw': totalOddsRaw,
+      'type': type,
+      'scraped_at': scrapedAt.toIso8601String(),
+      'count': count,
+      'cached': cached,
+    };
+  }
 }
 
 class BetOfDayMatch extends BaseMatch {
@@ -53,5 +65,15 @@ class BetOfDayMatch extends BaseMatch {
       prediction: json['prediction'] ?? '',
       matchUrl: json['match_url'] ?? '',
     );
+  }
+
+   Map<String, dynamic> toJson() {
+    return {
+      'date': date,
+      'match_title': matchTitle,
+      'teams': teams,
+      'prediction': prediction,
+      'match_url': matchUrl,
+    };
   }
 }

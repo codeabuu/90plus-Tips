@@ -16,6 +16,14 @@ class Prediction {
       odds: json['odds'] != null ? double.tryParse(json['odds'].toString()) : null,
     );
   }
+
+  // Add toJson method
+  Map<String, dynamic> toJson() {
+    return {
+      'prediction': prediction,
+      'odds': odds,
+    };
+  }
 }
 
 class MatchItem {
@@ -50,6 +58,19 @@ class MatchItem {
       detailLink: json['detail_link'] ?? '',
     );
   }
+
+  // Add toJson method
+  Map<String, dynamic> toJson() {
+    return {
+      'teams': teams,
+      'date': date,
+      'time': time,
+      'home_team': homeTeam,
+      'away_team': awayTeam,
+      'predictions': predictions.map((p) => p.toJson()).toList(),
+      'detail_link': detailLink,
+    };
+  }
 }
 
 class LeagueMatchesResponse {
@@ -72,6 +93,15 @@ class LeagueMatchesResponse {
       available: json['available'] ?? false,
     );
   }
+
+  // Add toJson method
+  Map<String, dynamic> toJson() {
+    return {
+      'matches': matches.map((m) => m.toJson()).toList(),
+      'message': message,
+      'available': available,
+    };
+  }
 }
 
 class League {
@@ -92,6 +122,19 @@ class League {
     required this.apiEndpoint,
     this.imagePath,
   });
+
+  // Add toJson method for League (though you might not need to cache this)
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'country': country,
+      'description': description,
+      'apiEndpoint': apiEndpoint,
+      'imagePath': imagePath,
+      // Note: icon and color are not JSON serializable
+      // You might want to store them as strings/indexes if needed
+    };
+  }
 
   static List<League> topLeagues = [
     League(

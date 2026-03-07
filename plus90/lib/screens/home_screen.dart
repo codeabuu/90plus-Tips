@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 import '../providers/predictions_provider.dart';
 import '../widgets/hero_section.dart';
 import '../services/api_service.dart';
+import '../services/cache_service.dart'; // Add this import
 import '../models/league_model.dart';
 import '../providers/subscription_provider.dart';
 import '../widgets/upgrade_modal.dart';
+import 'dart:convert';
 
 // Import other parts
 import 'homescreen2.dart';
@@ -23,16 +25,102 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ApiService _apiService = ApiService();
+  final CacheService _cache = CacheService(); // Add cache service
   bool _isFreeTipsExpanded = false;
   List<FreeTipData> _freeTips = [];
   bool _isLoadingFreeTips = false;
 
+  // Cache keys
+  static const String _freeTipsCacheKey = 'home_free_tips';
+  static const String _freeTipsTimestampKey = 'home_free_tips_timestamp';
+  static const Duration _cacheDuration = Duration(hours: 12); // 12-hour cache
+
   @override
   void initState() {
     super.initState();
+    _cache.init(); // Initialize cache
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PredictionsProvider>().fetchAllPredictions();
     });
+  }
+
+  // Save to cache
+  Future<void> _saveTipsToCache() async {
+    try {
+      final tipsJson = _freeTips.map((tip) {
+        return {
+          'homeTeam': tip.homeTeam,
+          'awayTeam': tip.awayTeam,
+          'prediction': tip.prediction,
+          'odds': tip.odds,
+          'date': tip.date,
+          'color': tip.color.value,
+        };
+      }).toList();
+      
+      // Save the tips
+      await _cache.setCache(
+        key: _freeTipsCacheKey,
+        data: tipsJson,
+      );
+      
+      // Save timestamp
+      await _cache.setCache(
+        key: _freeTipsTimestampKey,
+        data: DateTime.now().toIso8601String(),
+      );
+      
+      print('✅ Home free tips cached (12h expiry)');
+    } catch (e) {
+      print('❌ Error caching home tips: $e');
+    }
+  }
+
+  // Load from cache
+  Future<List<FreeTipData>?> _loadTipsFromCache() async {
+    try {
+      // Check timestamp
+      final timestampStr = await _cache.getCache(
+        key: _freeTipsTimestampKey,
+        fromJson: (json) => json as String,
+      );
+      
+      if (timestampStr == null) return null;
+      
+      final cachedTime = DateTime.parse(timestampStr);
+      final age = DateTime.now().difference(cachedTime);
+      
+      if (age > _cacheDuration) {
+        print('⏰ Home tips cache expired (${age.inHours}h old)');
+        return null;
+      }
+      
+      // Load cached tips
+      final cachedData = await _cache.getCache(
+        key: _freeTipsCacheKey,
+        fromJson: (jsonString) {
+          final List<dynamic> jsonList = json.decode(jsonString);
+          return jsonList.map((item) {
+            return FreeTipData(
+              homeTeam: item['homeTeam'],
+              awayTeam: item['awayTeam'],
+              prediction: item['prediction'],
+              odds: item['odds'],
+              date: item['date'],
+              color: Color(item['color']),
+            );
+          }).toList();
+        },
+      );
+      
+      if (cachedData != null && cachedData.isNotEmpty) {
+        print('📦 Using cached home tips (${age.inHours}h old)');
+        return cachedData;
+      }
+    } catch (e) {
+      print('❌ Error loading home tips from cache: $e');
+    }
+    return null;
   }
 
   @override
@@ -72,8 +160,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       tips: _freeTips,
                       onToggle: _toggleFreeTips,
                       onNavigate: widget.onNavigate,
-                      isPremium: subscriptionProvider.isPremium, // Pass premium status
-                      onUpgradeTap: _showUpgradeModal, 
+                      isPremium: subscriptionProvider.isPremium,
+                      onUpgradeTap: _showUpgradeModal,
                     ),
                     const SizedBox(height: 24),
                     PredictionCategoriesSection(
@@ -111,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _refreshData(PredictionsProvider provider) async {
     await provider.fetchAllPredictions();
     if (_isFreeTipsExpanded) {
-      await _loadFreeTips();
+      await _loadFreeTips(forceRefresh: true); // Force refresh on pull-to-refresh
     }
   }
 
@@ -122,26 +210,97 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isFreeTipsExpanded = !_isFreeTipsExpanded);
   }
 
-  Future<void> _loadFreeTips() async {
+  // Modified to accept forceRefresh parameter
+  Future<void> _loadFreeTips({bool forceRefresh = false}) async {
     setState(() {
       _isLoadingFreeTips = true;
       _freeTips.clear();
     });
 
     try {
-      final tips = await Future.wait([
-        _loadMegaAccumulatorTip(),
-        _loadBTTSTip(),
-        _loadFeaturedLeagueTip(),
-      ]);
+      // Try cache first (unless force refresh)
+      if (!forceRefresh) {
+        final cachedTips = await _loadTipsFromCache();
+        if (cachedTips != null) {
+          setState(() {
+            _freeTips = cachedTips;
+            _isLoadingFreeTips = false;
+          });
+          
+          // Refresh in background if cache is older than 6 hours
+          final timestampStr = await _cache.getCache(
+            key: _freeTipsTimestampKey,
+            fromJson: (json) => json as String,
+          );
+          
+          if (timestampStr != null) {
+            final cachedTime = DateTime.parse(timestampStr);
+            final age = DateTime.now().difference(cachedTime);
+            if (age > const Duration(hours: 6)) {
+              _refreshTipsInBackground();
+            }
+          }
+          return;
+        }
+      }
 
-      setState(() {
-        _freeTips = tips.whereType<FreeTipData>().toList();
-        _isLoadingFreeTips = false;
-      });
+      // No cache or force refresh - load fresh
+      await _loadFreshTips();
+
     } catch (e) {
       print('Error loading free tips: $e');
       setState(() => _isLoadingFreeTips = false);
+    }
+  }
+
+  // Load fresh tips - NOW ONLY 1 TIP instead of 3
+  Future<void> _loadFreshTips() async {
+    try {
+      print('🌐 Fetching fresh home tips (1 tip only)');
+      
+      // Create array of possible tip sources
+      final tipSources = [
+        _loadMegaAccumulatorTip(),
+        _loadBTTSTip(),
+        _loadFeaturedLeagueTip(),
+      ];
+      
+      // Shuffle and try each until we get one successful tip
+      tipSources.shuffle();
+      
+      FreeTipData? successfulTip;
+      for (var source in tipSources) {
+        try {
+          successfulTip = await source;
+          if (successfulTip != null) break;
+        } catch (e) {
+          continue;
+        }
+      }
+
+      setState(() {
+        _freeTips = successfulTip != null ? [successfulTip] : [];
+        _isLoadingFreeTips = false;
+      });
+
+      // Cache the single tip
+      if (_freeTips.isNotEmpty) {
+        await _saveTipsToCache();
+      }
+
+    } catch (e) {
+      print('Error loading fresh tips: $e');
+      rethrow;
+    }
+  }
+
+  // Refresh in background
+  Future<void> _refreshTipsInBackground() async {
+    try {
+      await _loadFreshTips();
+      print('✅ Home tips refreshed in background');
+    } catch (e) {
+      print('❌ Background refresh failed: $e');
     }
   }
 

@@ -10,6 +10,7 @@ import 'package:plus90/screens/leagues_screen.dart';
 import '../providers/predictions_provider.dart';
 import '../theme/app_theme.dart';
 import 'homescreen2.dart';
+import '../widgets/dotanimate.dart';
 
 // Card Configuration - Single source of truth
 class _CardConfig {
@@ -255,10 +256,11 @@ class _CategoryCard extends StatelessWidget {
   });
 
   static const Color oddsGreen = Color(0xFF00C853);
+  static const Color analyzingColor = Colors.grey; // Warm orange for analyzing
   
-  bool get _showOdds => odds != null && odds!.isNotEmpty;
-  String get _displayText => _showOdds ? 'Total Odds: $odds' : 'View';
+  bool get _showOdds => odds != null && odds!.isNotEmpty && odds != '0' && odds != '0.00';
   bool get _isFeatured => title == 'Tip of Day' || title == 'Todays Tips';
+  bool get _isAnalyzing => subtitle == 'Fetching...' || subtitle == 'Analyzing...' || odds == '0' || odds == '0.00';
 
   @override
   Widget build(BuildContext context) {
@@ -308,60 +310,112 @@ class _CategoryCard extends StatelessWidget {
               const SizedBox(height: 4),
               
               // Subtitle
-              SizedBox(
-                height: 32,
-                child: Center(
-                  child: _isFeatured
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(colors: [color.withOpacity(0.1), color.withOpacity(0.2)]),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            subtitle,
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        )
-                      : Text(
-                          subtitle,
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+        // First, import your dotanimate widget at the top of the file
+// Adjust the import path as needed
+
+// Then update the subtitle section in your _CategoryCard:
+
+// Subtitle
+SizedBox(
+  height: 32,
+  child: Center(
+    child: _isFeatured
+        ? Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [color.withOpacity(0.1), color.withOpacity(0.2)]),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: _isAnalyzing
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Analyzing',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                      AnimatedDots(color: analyzingColor, size: 11), // Your animated dots widget
+                    ],
+                  )
+                : Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 11, 
+                      fontWeight: FontWeight.w600, 
+                      color: color,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+          )
+        : _isAnalyzing
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Analyzing',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                  AnimatedDots(color: analyzingColor, size: 14), // Your animated dots widget
+                ],
+              )
+            : Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12, 
+                  color: Colors.grey[600], 
+                  fontWeight: FontWeight.w500,
                 ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
+  ),
+),
               
               const SizedBox(height: 6),
               
-              // Button
+              // Status indicator
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: _showOdds ? oddsGreen.withOpacity(0.1) : color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: _showOdds ? oddsGreen.withOpacity(0.3) : color.withOpacity(0.3),
-                    width: 1,
-                  ),
+                  color: _isAnalyzing ? analyzingColor.withOpacity(0.1) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: _showOdds
-                      ? [
+                child: _isAnalyzing
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.access_time,
+                            size: 10,
+                            color: analyzingColor,
+                          ),
                           const SizedBox(width: 4),
-                          Text(_displayText, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: oddsGreen)),
-                        ]
-                      : [
-                          Text('View', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color)),
-                          const SizedBox(width: 2),
-                          Icon(Icons.arrow_forward_ios_rounded, size: 7, color: color),
+                          Text(
+                            'Within 24hrs',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w500,
+                              color: oddsGreen,
+                            ),
+                          ),
                         ],
-                ),
+                      )
+                    : (_showOdds
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: oddsGreen.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Total Odds: $odds',
+                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w500, color: oddsGreen),
+                            ),
+                          )
+                        : const SizedBox.shrink()),
               ),
             ],
           ),
@@ -473,7 +527,7 @@ class ResponsibleGamblingFooter extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(20),
     color: AppTheme.primaryNavy.withOpacity(0.05),
-    child: Column( // Remove 'const' here
+    child: Column(
       children: [
         const Icon(Icons.shield, size: 28, color: AppTheme.primaryNavy),
         const SizedBox(height: 8),
