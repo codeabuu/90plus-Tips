@@ -4,7 +4,8 @@ import 'package:provider/provider.dart';
 import '../providers/predictions_provider.dart';
 import '../widgets/hero_section.dart';
 import '../services/api_service.dart';
-import '../services/cache_service.dart'; // Add this import
+import '../services/cache_service.dart';
+import '../services/local_notification_service.dart'; // Add this import
 import '../models/league_model.dart';
 import '../providers/subscription_provider.dart';
 import '../widgets/upgrade_modal.dart';
@@ -23,9 +24,10 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver { // Add WidgetsBindingObserver
   final ApiService _apiService = ApiService();
-  final CacheService _cache = CacheService(); // Add cache service
+  final CacheService _cache = CacheService();
+  final LocalNotificationService _notifications = LocalNotificationService(); // Add notifications
   bool _isFreeTipsExpanded = false;
   List<FreeTipData> _freeTips = [];
   bool _isLoadingFreeTips = false;
@@ -33,18 +35,60 @@ class _HomeScreenState extends State<HomeScreen> {
   // Cache keys
   static const String _freeTipsCacheKey = 'home_free_tips';
   static const String _freeTipsTimestampKey = 'home_free_tips_timestamp';
-  static const Duration _cacheDuration = Duration(hours: 12); // 12-hour cache
+  static const Duration _cacheDuration = Duration(hours: 12);
+
+  // User ID for notifications (use device ID or auth user ID)
+  String get _userId {
+    // You can use a device ID or get from auth provider
+    // For now, using a simple identifier
+    return 'user_${DateTime.now().millisecondsSinceEpoch}';
+  }
 
   @override
   void initState() {
     super.initState();
-    _cache.init(); // Initialize cache
+    WidgetsBinding.instance.addObserver(this); // Add observer
+    
+    _initNotifications(); // Initialize notifications
+    _cache.init();
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PredictionsProvider>().fetchAllPredictions();
+      _updateUserActivity(); // Track initial app open
     });
   }
 
-  // Save to cache
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Track app lifecycle
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _updateUserActivity(); // Track when app comes to foreground
+    }
+  }
+
+  // Initialize notifications
+  Future<void> _initNotifications() async {
+    await _notifications.init();
+  }
+
+  // Update user activity for inactivity tracking
+  Future<void> _updateUserActivity() async {
+    final subscriptionProvider = context.read<SubscriptionProvider>();
+    await _notifications.updateLastActive(_userId, subscriptionProvider.isPremium);
+  }
+
+  // Handle user upgrade
+  Future<void> _handleUserUpgrade() async {
+    final subscriptionProvider = context.read<SubscriptionProvider>();
+    await _notifications.rescheduleForPremiumStatus(subscriptionProvider.isPremium);
+  }
+
   Future<void> _saveTipsToCache() async {
     try {
       final tipsJson = _freeTips.map((tip) {
@@ -58,13 +102,11 @@ class _HomeScreenState extends State<HomeScreen> {
         };
       }).toList();
       
-      // Save the tips
       await _cache.setCache(
         key: _freeTipsCacheKey,
         data: tipsJson,
       );
       
-      // Save timestamp
       await _cache.setCache(
         key: _freeTipsTimestampKey,
         data: DateTime.now().toIso8601String(),
@@ -76,10 +118,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Load from cache
   Future<List<FreeTipData>?> _loadTipsFromCache() async {
     try {
-      // Check timestamp
       final timestampStr = await _cache.getCache(
         key: _freeTipsTimestampKey,
         fromJson: (json) => json as String,
@@ -95,7 +135,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return null;
       }
       
-      // Load cached tips
       final cachedData = await _cache.getCache(
         key: _freeTipsCacheKey,
         fromJson: (jsonString) {
@@ -128,7 +167,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final predictionsProvider = context.watch<PredictionsProvider>();
     final subscriptionProvider = context.watch<SubscriptionProvider>();
 
-    // Full hero height = 200, sticky bar height = 56
     const double heroMax = 200;
     const double heroMin = 56;
 
@@ -139,7 +177,6 @@ class _HomeScreenState extends State<HomeScreen> {
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              // Sticky Hero
               SliverPersistentHeader(
                 pinned: true,
                 delegate: HeroSliverDelegate(
@@ -147,8 +184,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   minExtent: heroMin,
                 ),
               ),
-
-              // Rest of content
               SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,15 +227,25 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const UpgradeModal(),
-    );
+      builder: (context) {
+        // When modal closes, check if user upgraded
+        return const UpgradeModal();
+      },
+    ).then((_) {
+      // After modal closes, check premium status and update notifications
+      final subscriptionProvider = context.read<SubscriptionProvider>();
+      if (subscriptionProvider.isPremium) {
+        _handleUserUpgrade();
+      }
+    });
   }
 
   Future<void> _refreshData(PredictionsProvider provider) async {
     await provider.fetchAllPredictions();
     if (_isFreeTipsExpanded) {
-      await _loadFreeTips(forceRefresh: true); // Force refresh on pull-to-refresh
+      await _loadFreeTips(forceRefresh: true);
     }
+    _updateUserActivity(); // Track refresh as activity
   }
 
   Future<void> _toggleFreeTips() async {
@@ -208,9 +253,9 @@ class _HomeScreenState extends State<HomeScreen> {
       await _loadFreeTips();
     }
     setState(() => _isFreeTipsExpanded = !_isFreeTipsExpanded);
+    _updateUserActivity(); // Track interaction
   }
 
-  // Modified to accept forceRefresh parameter
   Future<void> _loadFreeTips({bool forceRefresh = false}) async {
     setState(() {
       _isLoadingFreeTips = true;
@@ -218,7 +263,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      // Try cache first (unless force refresh)
       if (!forceRefresh) {
         final cachedTips = await _loadTipsFromCache();
         if (cachedTips != null) {
@@ -227,7 +271,6 @@ class _HomeScreenState extends State<HomeScreen> {
             _isLoadingFreeTips = false;
           });
           
-          // Refresh in background if cache is older than 6 hours
           final timestampStr = await _cache.getCache(
             key: _freeTipsTimestampKey,
             fromJson: (json) => json as String,
@@ -244,7 +287,6 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
 
-      // No cache or force refresh - load fresh
       await _loadFreshTips();
 
     } catch (e) {
@@ -253,19 +295,16 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Load fresh tips - NOW ONLY 1 TIP instead of 3
   Future<void> _loadFreshTips() async {
     try {
       print('🌐 Fetching fresh home tips (1 tip only)');
       
-      // Create array of possible tip sources
       final tipSources = [
         _loadMegaAccumulatorTip(),
         _loadBTTSTip(),
         _loadFeaturedLeagueTip(),
       ];
       
-      // Shuffle and try each until we get one successful tip
       tipSources.shuffle();
       
       FreeTipData? successfulTip;
@@ -283,7 +322,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _isLoadingFreeTips = false;
       });
 
-      // Cache the single tip
       if (_freeTips.isNotEmpty) {
         await _saveTipsToCache();
       }
@@ -294,7 +332,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Refresh in background
   Future<void> _refreshTipsInBackground() async {
     try {
       await _loadFreshTips();

@@ -6,6 +6,10 @@ import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../screens/Helpcenterscreen.dart';
 import '../screens/successrate_screen.dart';
+import 'termsnconds.dart';
+import 'privacypolicy.dart';
+import 'methodology.dart';
+import '../widgets/profile_dropdown.dart';
 
 
 class MoreScreen extends StatefulWidget {
@@ -48,67 +52,50 @@ void _rateApp() async {
   }
 }
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppTheme.primaryNavy,
-                      Color(0xFF2A3658),
-                    ],
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.settings,
-                      size: 32,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Settings & More',
-                      style: Theme.of(context).textTheme.displayLarge!.copyWith(
-                            color: Colors.white,
-                            fontSize: 28,
-                          ),
-                    ),
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: SafeArea(
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+           // Header - FIXED
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppTheme.primaryNavy,
+                    const Color(0xFF2A3658),
                   ],
                 ),
               ),
+              child: Column(  // ← This was missing!
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.settings,
+                    size: 32,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Settings & More',
+                    style: Theme.of(context).textTheme.displayLarge!.copyWith(
+                          color: Colors.white,
+                          fontSize: 28,
+                        ),
+                  ),
+                ],
+              ),
+            ),
 
               const SizedBox(height: 16),
 
-              // Settings Sections
-              _buildSettingsSection(context, 'ACCOUNT', [
-                _buildSettingsItem(
-                  icon: Icons.person,
-                  title: 'Profile',
-                  onTap: () {},
-                ),
-                _buildSettingsItem(
-                  icon: Icons.notifications,
-                  title: 'Notifications',
-                  onTap: () {},
-                ),
-                _buildSettingsItem(
-                  icon: Icons.security,
-                  title: 'Privacy & Security',
-                  onTap: () {},
-                ),
-              ]),
-
+              const ProfileDropdown(),
               _buildSettingsSection(context, 'APP', [
                 _buildSettingsItem(
                   icon: Icons.language,
@@ -135,8 +122,15 @@ void _rateApp() async {
                 _buildSettingsItem(
                   icon: Icons.text_snippet,
                   title: 'Our Methodology',
-                  onTap: () {},
-                ),
+                  onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MethodologyScreen(),
+                    ),
+                  );
+                },
+              ),
                 _buildSettingsItem(
                   icon: Icons.bar_chart,
                   title: 'Success Rates',
@@ -191,19 +185,29 @@ void _rateApp() async {
               _buildSettingsSection(context, 'LEGAL', [
                 _buildSettingsItem(
                   icon: Icons.description,
-                  title: 'Terms of Service',
-                  onTap: () {},
+                  title: 'Terms & Conditions',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TermsScreen(),
+                      ),
+                    );
+                  },
                 ),
                 _buildSettingsItem(
                   icon: Icons.privacy_tip,
                   title: 'Privacy Policy',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PrivacyScreen(),
+                      ),
+                    );
+                  },
                 ),
-                _buildSettingsItem(
-                  icon: Icons.cookie,
-                  title: 'Cookie Settings',
-                  onTap: () {},
-                ),
+                
               ]),
 
               const SizedBox(height: 32),
@@ -315,7 +319,7 @@ void _rateApp() async {
                         ),
                         const SizedBox(width: 8),
                         const Text(
-                          'Responsible Gambling',
+                          'Responsible Usage',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -327,27 +331,27 @@ void _rateApp() async {
                     const SizedBox(height: 12),
                     const Text(
                       'This app provides predictions for entertainment purposes. '
-                      'Please gamble responsibly and within your means.',
+                      'Please use them responsibly and within your means.',
                       style: TextStyle(
                         fontSize: 14,
                         color: AppTheme.primaryNavy,
                         height: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: () {
-                          // Show gambling help resources
-                        },
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: AppTheme.mutedRed),
-                          foregroundColor: AppTheme.mutedRed,
-                        ),
-                        child: const Text('Get Help & Support'),
-                      ),
-                    ),
+                    // const SizedBox(height: 16),
+                    // SizedBox(
+                    //   width: double.infinity,
+                    //   child: OutlinedButton(
+                    //     onPressed: () {
+                    //       // Show gambling help resources
+                    //     },
+                    //     style: OutlinedButton.styleFrom(
+                    //       side: const BorderSide(color: AppTheme.mutedRed),
+                    //       foregroundColor: AppTheme.mutedRed,
+                    //     ),
+                    //     child: const Text('Get Help & Support'),
+                    //   ),
+                    // ),
                   ],
                 ),
               ),

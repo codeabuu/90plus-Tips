@@ -11,10 +11,15 @@ import 'providers/predictions_provider.dart';
 import 'providers/subscription_provider.dart';
 import 'theme/app_theme.dart';
 import 'widgets/upgrade_modal.dart';
+import 'services/local_notification_service.dart'; // Add this import
 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize notifications - USE THE SINGLETON INSTANCE
+  final notifications = LocalNotificationService();
+  await notifications.init();
   
   // Load environment variables
   await dotenv.load(fileName: "assets/.env");
@@ -50,13 +55,17 @@ class MainAppScreen extends StatefulWidget {
   State<MainAppScreen> createState() => _MainAppScreenState();
 }
 
-class _MainAppScreenState extends State<MainAppScreen> {
+class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserver { // Add WidgetsBindingObserver
   int _selectedIndex = 0;
   late List<Widget> _screens;
+  final LocalNotificationService _notifications = LocalNotificationService();
 
   @override
   void initState() {
     super.initState();
+    
+    // Add observer for app lifecycle
+    WidgetsBinding.instance.addObserver(this);
     
     // Initialize subscription provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -71,15 +80,51 @@ class _MainAppScreenState extends State<MainAppScreen> {
     ];
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Track app lifecycle
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _updateUserActivity();
+    }
+  }
+
+  // Get user ID for tracking
+  String get _userId {
+    // You can get this from your auth provider if you have user accounts
+    // For now, using a simple device ID
+    return 'device_${DateTime.now().millisecondsSinceEpoch}';
+  }
+
+  Future<void> _updateUserActivity() async {
+    final subscriptionProvider = context.read<SubscriptionProvider>();
+    await _notifications.updateLastActive(_userId, subscriptionProvider.isPremium);
+  }
+
   Future<void> _initializeSubscription() async {
     final subscriptionProvider = context.read<SubscriptionProvider>();
     await subscriptionProvider.initialize();
+    
+    // After subscription initialized, check if user is premium
+    if (subscriptionProvider.isPremium) {
+      // Premium users get different notification schedule
+      await _notifications.rescheduleForPremiumStatus(true);
+    }
+    
+    // Track initial activity
+    _updateUserActivity();
   }
 
   void _navigateToScreen(int index) {
     setState(() {
       _selectedIndex = index;
     });
+    _updateUserActivity(); // Track navigation
   }
 
   void _onItemTapped(int index) {
@@ -95,6 +140,7 @@ class _MainAppScreenState extends State<MainAppScreen> {
     setState(() {
       _selectedIndex = index;
     });
+    _updateUserActivity(); // Track tab change
   }
 
   void _showUpgradeModal(BuildContext context) {
@@ -103,7 +149,14 @@ class _MainAppScreenState extends State<MainAppScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const UpgradeModal(),
-    );
+    ).then((_) {
+      // After modal closes, check if user upgraded
+      final subscriptionProvider = context.read<SubscriptionProvider>();
+      if (subscriptionProvider.isPremium) {
+        // Reschedule notifications for premium user
+        _notifications.rescheduleForPremiumStatus(true);
+      }
+    });
   }
 
   @override
@@ -114,6 +167,7 @@ class _MainAppScreenState extends State<MainAppScreen> {
           setState(() {
             _selectedIndex = 0;
           });
+          _updateUserActivity();
           return false;
         }
         return true;
