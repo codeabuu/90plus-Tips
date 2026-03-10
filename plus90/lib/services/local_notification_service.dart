@@ -55,17 +55,143 @@ class LocalNotificationService {
 
       // Request permissions
       await _requestPermissions();
+      
+      // Request exact alarm permission for Android 12+
+      await _requestExactAlarmPermission();
 
       // Schedule all notifications
       await _scheduleAllNotifications();
+      
+      // COMMENTED OUT: Test methods
+      // await _runNotificationTests();
       
       _isInitialized = true;
       print('✅ LocalNotificationService initialized successfully');
     } catch (e) {
       print('❌ Error initializing LocalNotificationService: $e');
-      // Don't rethrow - catch and handle gracefully
     }
   }
+  
+  // COMMENTED OUT: All test methods below
+  /*
+  Future<void> _runNotificationTests() async {
+    print('🧪 ===== RUNNING NOTIFICATION TESTS =====');
+    
+    // Test 1: Immediate notification
+    await _testImmediateNotification();
+    
+    // Test 2: Schedule for 1 minute from now
+    await _testScheduledNotification();
+    
+    // Test 3: Check all pending notifications
+    await _checkPendingNotifications();
+    
+    print('🧪 ===== TESTS COMPLETE =====');
+  }
+
+  // 🔴 Test 1: Immediate notification
+  Future<void> _testImmediateNotification() async {
+    print('🧪 Test 1: Sending immediate notification...');
+    
+    try {
+      await _notifications.show(
+        id: 999991,
+        title: '🔔 TEST: Immediate',
+        body: 'This notification should appear NOW!',
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'test_channel',
+            'Test Channel',
+            channelDescription: 'For testing notifications',
+            importance: Importance.high,
+            priority: Priority.high,
+            enableVibration: true,
+            playSound: true,
+          ),
+          iOS: DarwinNotificationDetails(
+            sound: 'default',
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: 'test_immediate',
+      );
+      print('✅ Test 1: Immediate notification sent');
+    } catch (e) {
+      print('❌ Test 1 failed: $e');
+    }
+  }
+
+  // 🔴 Test 2: Scheduled notification (1 minute)
+  Future<void> _testScheduledNotification() async {
+    final testTime = DateTime.now().add(const Duration(minutes: 1));
+    print('🧪 Test 2: Scheduling notification for: $testTime');
+    
+    try {
+      final ukLocation = tz.getLocation('Europe/London');
+      final tzTestTime = tz.TZDateTime(
+        ukLocation,
+        testTime.year, testTime.month, testTime.day,
+        testTime.hour, testTime.minute,
+      );
+
+      await _notifications.zonedSchedule(
+        id: 999992,
+        title: '⏰ TEST: 1 Minute',
+        body: 'This should appear 1 minute after scheduling',
+        scheduledDate: tzTestTime,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'test_channel',
+            'Test Channel',
+            channelDescription: 'For testing notifications',
+            importance: Importance.high,
+            priority: Priority.high,
+            enableVibration: true,
+            playSound: true,
+          ),
+          iOS: DarwinNotificationDetails(
+            sound: 'default',
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: 'test_scheduled',
+      );
+      print('✅ Test 2: Scheduled notification set for ${testTime.toString()}');
+    } catch (e) {
+      print('❌ Test 2 failed: $e');
+    }
+  }
+
+  // 🔴 Test 3: Check pending notifications
+  Future<void> _checkPendingNotifications() async {
+    print('🧪 Test 3: Checking pending notifications...');
+
+    try {
+      final pending = await _notifications.pendingNotificationRequests();
+
+      if (pending.isEmpty) {
+        print('📭 No pending notifications');
+        return;
+      }
+
+      print('📋 Total pending: ${pending.length}');
+
+      for (var notification in pending) {
+        print('  - ID: ${notification.id}');
+        print('    Title: ${notification.title}');
+        print('    Body: ${notification.body}');
+        print('    Payload: ${notification.payload}');
+      }
+    } catch (e) {
+      print('⚠️ Pending notification check skipped: $e');
+    }
+  }
+  */
 
   Future<void> _requestPermissions() async {
     final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
@@ -80,25 +206,48 @@ class LocalNotificationService {
       sound: true,
     );
   }
+  
+  // Request exact alarm permission for Android 12+
+  Future<void> _requestExactAlarmPermission() async {
+    final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidPlugin != null) {
+      final granted = await androidPlugin.requestExactAlarmsPermission();
+
+      if (granted == true) {
+        print('✅ Exact alarm permission GRANTED');
+      } else {
+        print('❌ Exact alarm permission DENIED');
+      }
+    } else {
+      print('⚠️ Android plugin not available');
+    }
+  }
 
   void _handleNotificationTap(String? payload) {
     print('Notification tapped with payload: $payload');
-    // Navigate based on payload using a global navigator key or event bus
   }
-
+  
   Future<void> _scheduleAllNotifications() async {
     final today = DateTime.now();
+    final uk = tz.getLocation('Europe/London');
 
     // ============================================
-    // DAILY NOTIFICATIONS (Every day)
+    // PREMIUM WINS (Daily 9:30am)
     // ============================================
-    
-    // Premium win notifications (daily 9:30am)
     for (int i = 0; i < 7; i++) {
       final date = today.add(Duration(days: i));
-      final scheduleTime = DateTime(date.year, date.month, date.day, 9, 30);
+      final scheduleTime = tz.TZDateTime(
+        uk,
+        date.year,
+        date.month,
+        date.day,
+        9,
+        30,
+      );
 
-      if (scheduleTime.isAfter(DateTime.now())) {
+      if (scheduleTime.isAfter(tz.TZDateTime.now(uk))) {
         await _scheduleNotification(
           id: _getNotificationId('premium', date),
           title: '🏆 Premium Wins',
@@ -110,19 +259,26 @@ class LocalNotificationService {
     }
 
     // ============================================
-    // WEEKDAY NOTIFICATIONS (Monday - Thursday)
+    // MORNING PREDICTIONS (Weekdays 11am)
     // ============================================
-    
-    // Morning Predictions (Weekdays 11am) - Original
     for (int i = 0; i < 7; i++) {
       final date = today.add(Duration(days: i));
 
+      // Skip weekends
       if (date.weekday == DateTime.saturday || date.weekday == DateTime.sunday) {
         continue;
       }
 
-      final scheduleTime = DateTime(date.year, date.month, date.day, 11, 0);
-      if (scheduleTime.isAfter(DateTime.now())) {
+      final scheduleTime = tz.TZDateTime(
+        uk,
+        date.year,
+        date.month,
+        date.day,
+        11,
+        0,
+      );
+
+      if (scheduleTime.isAfter(tz.TZDateTime.now(uk))) {
         await _scheduleNotification(
           id: _getNotificationId('morning', date),
           title: '⚽ Morning Predictions',
@@ -133,7 +289,9 @@ class LocalNotificationService {
       }
     }
 
-    // Evening Matches (Weekdays 4pm) - Original
+    // ============================================
+    // EVENING MATCHES (Weekdays 4pm)
+    // ============================================
     for (int i = 0; i < 7; i++) {
       final date = today.add(Duration(days: i));
 
@@ -141,8 +299,16 @@ class LocalNotificationService {
         continue;
       }
 
-      final scheduleTime = DateTime(date.year, date.month, date.day, 16, 0);
-      if (scheduleTime.isAfter(DateTime.now())) {
+      final scheduleTime = tz.TZDateTime(
+        uk,
+        date.year,
+        date.month,
+        date.day,
+        16,
+        0,
+      );
+
+      if (scheduleTime.isAfter(tz.TZDateTime.now(uk))) {
         await _scheduleNotification(
           id: _getNotificationId('evening', date),
           title: '🌙 Evening Matches',
@@ -154,16 +320,23 @@ class LocalNotificationService {
     }
 
     // ============================================
-    // FRIDAY NOTIFICATIONS (Weekend Build-up)
+    // FRIDAY NOTIFICATIONS
     // ============================================
-    
     for (int i = 0; i < 7; i++) {
       final date = today.add(Duration(days: i));
 
       if (date.weekday == DateTime.friday) {
-        // Friday morning (10:00 AM) - Weekend Preview
-        final morningTime = DateTime(date.year, date.month, date.day, 10, 0);
-        if (morningTime.isAfter(DateTime.now())) {
+        // Friday morning (10:00 AM)
+        final morningTime = tz.TZDateTime(
+          uk,
+          date.year,
+          date.month,
+          date.day,
+          10,
+          0,
+        );
+
+        if (morningTime.isAfter(tz.TZDateTime.now(uk))) {
           await _scheduleNotification(
             id: _getNotificationId('friday_morning', date),
             title: '🔮 Weekend Preview',
@@ -173,9 +346,17 @@ class LocalNotificationService {
           );
         }
 
-        // Friday afternoon (3:00 PM) - Friday Night Football
-        final afternoonTime = DateTime(date.year, date.month, date.day, 15, 0);
-        if (afternoonTime.isAfter(DateTime.now())) {
+        // Friday afternoon (3:00 PM)
+        final afternoonTime = tz.TZDateTime(
+          uk,
+          date.year,
+          date.month,
+          date.day,
+          15,
+          0,
+        );
+
+        if (afternoonTime.isAfter(tz.TZDateTime.now(uk))) {
           await _scheduleNotification(
             id: _getNotificationId('friday_afternoon', date),
             title: '🌙 Friday Night Football',
@@ -190,14 +371,21 @@ class LocalNotificationService {
     // ============================================
     // SATURDAY NOTIFICATIONS
     // ============================================
-    
     for (int i = 0; i < 14; i++) {
       final date = today.add(Duration(days: i));
 
       if (date.weekday == DateTime.saturday) {
         // Saturday morning (10:30 AM)
-        final morningTime = DateTime(date.year, date.month, date.day, 10, 30);
-        if (morningTime.isAfter(DateTime.now())) {
+        final morningTime = tz.TZDateTime(
+          uk,
+          date.year,
+          date.month,
+          date.day,
+          10,
+          30,
+        );
+
+        if (morningTime.isAfter(tz.TZDateTime.now(uk))) {
           await _scheduleNotification(
             id: _getNotificationId('saturday_morning', date),
             title: '⚡ Super Saturday',
@@ -208,8 +396,16 @@ class LocalNotificationService {
         }
 
         // Saturday afternoon (2:30 PM)
-        final afternoonTime = DateTime(date.year, date.month, date.day, 14, 30);
-        if (afternoonTime.isAfter(DateTime.now())) {
+        final afternoonTime = tz.TZDateTime(
+          uk,
+          date.year,
+          date.month,
+          date.day,
+          14,
+          30,
+        );
+
+        if (afternoonTime.isAfter(tz.TZDateTime.now(uk))) {
           await _scheduleNotification(
             id: _getNotificationId('saturday_afternoon', date),
             title: '🏆 Afternoon Action',
@@ -220,8 +416,16 @@ class LocalNotificationService {
         }
 
         // Saturday night (10:00 PM)
-        final nightTime = DateTime(date.year, date.month, date.day, 22, 0);
-        if (nightTime.isAfter(DateTime.now())) {
+        final nightTime = tz.TZDateTime(
+          uk,
+          date.year,
+          date.month,
+          date.day,
+          22,
+          0,
+        );
+
+        if (nightTime.isAfter(tz.TZDateTime.now(uk))) {
           await _scheduleNotification(
             id: _getNotificationId('saturday_night', date),
             title: '📝 Saturday Round-up',
@@ -236,14 +440,21 @@ class LocalNotificationService {
     // ============================================
     // SUNDAY NOTIFICATIONS
     // ============================================
-    
     for (int i = 0; i < 14; i++) {
       final date = today.add(Duration(days: i));
 
       if (date.weekday == DateTime.sunday) {
         // Sunday morning (10:30 AM)
-        final morningTime = DateTime(date.year, date.month, date.day, 10, 30);
-        if (morningTime.isAfter(DateTime.now())) {
+        final morningTime = tz.TZDateTime(
+          uk,
+          date.year,
+          date.month,
+          date.day,
+          10,
+          30,
+        );
+
+        if (morningTime.isAfter(tz.TZDateTime.now(uk))) {
           await _scheduleNotification(
             id: _getNotificationId('sunday_morning', date),
             title: '☀️ Sunday Football',
@@ -254,8 +465,16 @@ class LocalNotificationService {
         }
 
         // Sunday afternoon (3:30 PM)
-        final afternoonTime = DateTime(date.year, date.month, date.day, 15, 30);
-        if (afternoonTime.isAfter(DateTime.now())) {
+        final afternoonTime = tz.TZDateTime(
+          uk,
+          date.year,
+          date.month,
+          date.day,
+          15,
+          30,
+        );
+
+        if (afternoonTime.isAfter(tz.TZDateTime.now(uk))) {
           await _scheduleNotification(
             id: _getNotificationId('sunday_afternoon', date),
             title: '🔥 Main Event',
@@ -266,8 +485,16 @@ class LocalNotificationService {
         }
 
         // Sunday evening (8:00 PM)
-        final eveningTime = DateTime(date.year, date.month, date.day, 20, 0);
-        if (eveningTime.isAfter(DateTime.now())) {
+        final eveningTime = tz.TZDateTime(
+          uk,
+          date.year,
+          date.month,
+          date.day,
+          20,
+          0,
+        );
+
+        if (eveningTime.isAfter(tz.TZDateTime.now(uk))) {
           await _scheduleNotification(
             id: _getNotificationId('sunday_evening', date),
             title: '🔜 Monday Football',
@@ -280,15 +507,22 @@ class LocalNotificationService {
     }
 
     // ============================================
-    // WEEKEND MULTI COMBO
+    // WEEKEND MULTI COMBO (Saturday & Sunday 9:30am)
     // ============================================
-    
     for (int i = 0; i < 14; i++) {
       final date = today.add(Duration(days: i));
 
       if (date.weekday == DateTime.saturday) {
-        final comboTime = DateTime(date.year, date.month, date.day, 9, 30);
-        if (comboTime.isAfter(DateTime.now())) {
+        final comboTime = tz.TZDateTime(
+          uk,
+          date.year,
+          date.month,
+          date.day,
+          9,
+          30,
+        );
+
+        if (comboTime.isAfter(tz.TZDateTime.now(uk))) {
           await _scheduleNotification(
             id: _getNotificationId('weekend_combo_sat', date),
             title: '🎯 Saturday Multi Combo',
@@ -300,8 +534,16 @@ class LocalNotificationService {
       }
 
       if (date.weekday == DateTime.sunday) {
-        final comboTime = DateTime(date.year, date.month, date.day, 9, 30);
-        if (comboTime.isAfter(DateTime.now())) {
+        final comboTime = tz.TZDateTime(
+          uk,
+          date.year,
+          date.month,
+          date.day,
+          9,
+          30,
+        );
+
+        if (comboTime.isAfter(tz.TZDateTime.now(uk))) {
           await _scheduleNotification(
             id: _getNotificationId('weekend_combo_sun', date),
             title: '🎯 Sunday Multi Combo',
@@ -318,7 +560,7 @@ class LocalNotificationService {
     required int id,
     required String title,
     required String body,
-    required DateTime scheduledTime,
+    required tz.TZDateTime scheduledTime,
     String? payload,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -329,8 +571,6 @@ class LocalNotificationService {
       print('⏭️ Notification $id already scheduled, skipping');
       return;
     }
-
-    final tzScheduledTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
@@ -352,7 +592,7 @@ class LocalNotificationService {
       id: id,
       title: title,
       body: body,
-      scheduledDate: tzScheduledTime,
+      scheduledDate: scheduledTime,
       notificationDetails: platformDetails,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       payload: payload,
@@ -360,56 +600,34 @@ class LocalNotificationService {
     
     // Mark as scheduled
     await prefs.setBool(notificationKey, true);
-    print('✅ Notification $id scheduled for ${scheduledTime.toString()}');
+    print('✅ Notification $id scheduled for ${scheduledTime.toString()} UK time');
   }
 
   int _getNotificationId(String type, DateTime date) {
-    final dateStr = DateFormat('yyyyMMdd').format(date);
+    // Safe: type_code * 100000 + dayOfYear * 100 + yearShort
+    // Max value ~7,243,299 — well within Android int32 limit of 2,147,483,647
+    final dayOfYear = int.parse(DateFormat('D').format(date));
+    final yearShort = int.parse(DateFormat('yy').format(date));
+    final suffix = dayOfYear * 100 + yearShort;
+
     switch (type) {
-      // Daily
-      case 'premium':
-        return int.parse('1$dateStr');
-      
-      // Weekday originals
-      case 'morning':
-        return int.parse('2$dateStr');
-      case 'evening':
-        return int.parse('3$dateStr');
-      
-      // Friday
-      case 'friday_morning':
-        return int.parse('41$dateStr');
-      case 'friday_afternoon':
-        return int.parse('42$dateStr');
-      
-      // Saturday
-      case 'saturday_morning':
-        return int.parse('51$dateStr');
-      case 'saturday_afternoon':
-        return int.parse('52$dateStr');
-      case 'saturday_night':
-        return int.parse('53$dateStr');
-      
-      // Sunday
-      case 'sunday_morning':
-        return int.parse('61$dateStr');
-      case 'sunday_afternoon':
-        return int.parse('62$dateStr');
-      case 'sunday_evening':
-        return int.parse('63$dateStr');
-      
-      // Weekend combos
-      case 'weekend_combo_sat':
-        return int.parse('71$dateStr');
-      case 'weekend_combo_sun':
-        return int.parse('72$dateStr');
-      
-      default:
-        return int.parse('9$dateStr');
+      case 'premium':            return 10 * 100000 + suffix;
+      case 'morning':            return 20 * 100000 + suffix;
+      case 'evening':            return 30 * 100000 + suffix;
+      case 'friday_morning':     return 41 * 100000 + suffix;
+      case 'friday_afternoon':   return 42 * 100000 + suffix;
+      case 'saturday_morning':   return 51 * 100000 + suffix;
+      case 'saturday_afternoon': return 52 * 100000 + suffix;
+      case 'saturday_night':     return 53 * 100000 + suffix;
+      case 'sunday_morning':     return 61 * 100000 + suffix;
+      case 'sunday_afternoon':   return 62 * 100000 + suffix;
+      case 'sunday_evening':     return 63 * 100000 + suffix;
+      case 'weekend_combo_sat':  return 71 * 100000 + suffix;
+      case 'weekend_combo_sun':  return 72 * 100000 + suffix;
+      default:                   return 90 * 100000 + suffix;
     }
   }
 
-  // Check inactivity and notify (only for free users)
   Future<void> checkInactivity(String userId, bool isPremium) async {
     if (isPremium) return;
 
@@ -452,7 +670,6 @@ class LocalNotificationService {
     }
   }
 
-  // Update last active timestamp
   Future<void> updateLastActive(String userId, bool isPremium) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
@@ -462,7 +679,6 @@ class LocalNotificationService {
     await checkInactivity(userId, isPremium);
   }
 
-  // Reschedule notifications when premium status changes
   Future<void> rescheduleForPremiumStatus(bool isPremium) async {
     await _notifications.cancelAll();
 
@@ -476,11 +692,10 @@ class LocalNotificationService {
     await _scheduleAllNotifications();
 
     if (isPremium) {
-      print('👑 Premium user - notifications will show premium content');
+      print('👑 Premium user - notifications rescheduled');
     }
   }
 
-  // Cancel all notifications and clear stored flags
   Future<void> cancelAll() async {
     await _notifications.cancelAll();
     final prefs = await SharedPreferences.getInstance();
@@ -491,7 +706,6 @@ class LocalNotificationService {
     }
   }
 
-  // Cancel a single notification by id
   Future<void> cancelById(int id) async {
     await _notifications.cancel(id: id);
     final prefs = await SharedPreferences.getInstance();

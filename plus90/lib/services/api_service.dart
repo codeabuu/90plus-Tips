@@ -12,9 +12,10 @@ import '../models/league_model.dart';
 import '../providers/predictions_provider.dart';
 import 'dart:io';
 import 'cache_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://127.0.0.1:8000';
+  static final String baseUrl = dotenv.env['BACKEND_URL']!;
   
   final Map<String, String> _headers = {
     'Content-Type': 'application/json',

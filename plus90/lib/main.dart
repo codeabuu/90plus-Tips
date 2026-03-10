@@ -94,17 +94,10 @@ class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserv
     }
   }
 
-  // Get user ID for tracking
-  String get _userId {
-    // You can get this from your auth provider if you have user accounts
-    // For now, using a simple device ID
-    return 'device_${DateTime.now().millisecondsSinceEpoch}';
-  }
-
-  Future<void> _updateUserActivity() async {
-    final subscriptionProvider = context.read<SubscriptionProvider>();
-    await _notifications.updateLastActive(_userId, subscriptionProvider.isPremium);
-  }
+    Future<void> _updateUserActivity() async {
+      final subscriptionProvider = context.read<SubscriptionProvider>();
+      await _notifications.updateLastActive('app_user', subscriptionProvider.isPremium);
+    }
 
   Future<void> _initializeSubscription() async {
     final subscriptionProvider = context.read<SubscriptionProvider>();
