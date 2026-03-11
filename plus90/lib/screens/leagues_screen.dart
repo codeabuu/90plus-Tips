@@ -97,7 +97,6 @@ class _LeaguesScreenState extends State<LeaguesScreen> {
           orElse: () => League(
             name: leagueName,
             country: '',
-            icon: Icons.sports_soccer,
             color: Colors.grey,
             description: '',
             apiEndpoint: '',
@@ -135,19 +134,48 @@ class _LeaguesScreenState extends State<LeaguesScreen> {
                   child: Row(
                     children: [
                       // League Icon with color
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: league.color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          league.icon,
-                          size: 24,
-                          color: league.color,
-                        ),
-                      ),
+                      // League Image with fallback
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: league.color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: league.imagePath != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.asset(
+                              league.imagePath!,
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                // Fallback to first letter if image fails
+                                return Center(
+                                  child: Text(
+                                    league.name.substring(0, 1),
+                                    style: TextStyle(
+                                      color: league.color,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              league.name.substring(0, 1),
+                              style: TextStyle(
+                                color: league.color,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                  ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(

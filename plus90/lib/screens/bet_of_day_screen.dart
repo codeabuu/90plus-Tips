@@ -341,13 +341,6 @@ Widget _buildMatchItem(BetOfDayMatch match) {
                 ),
               ),
             ),
-            Text(
-              match.date,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
           ],
         ),
       ],

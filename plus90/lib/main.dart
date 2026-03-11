@@ -55,7 +55,7 @@ class MainAppScreen extends StatefulWidget {
   State<MainAppScreen> createState() => _MainAppScreenState();
 }
 
-class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserver { // Add WidgetsBindingObserver
+class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   late List<Widget> _screens;
   final LocalNotificationService _notifications = LocalNotificationService();

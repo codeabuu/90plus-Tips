@@ -15,7 +15,8 @@ import '../widgets/dotanimate.dart';
 // Card Configuration - Single source of truth
 class _CardConfig {
   final String title;
-  final IconData icon;
+  final String? iconPath;
+  final IconData? icon;
   final Color color;
   final Widget? targetScreen;
   final int? tabIndex;
@@ -25,7 +26,8 @@ class _CardConfig {
 
   const _CardConfig({
     required this.title,
-    required this.icon,
+    this.iconPath,
+    this.icon,
     required this.color,
     this.targetScreen,
     this.tabIndex,
@@ -55,6 +57,7 @@ class PredictionCategoriesSection extends StatelessWidget {
   List<_CardConfig> get _cards => [
     _CardConfig(
       title: 'Todays Tips',
+      iconPath: 'assets/icons/today_tips.png',
       icon: Icons.whatshot,
       color: AppTheme.accentGold,
       tabIndex: 1,
@@ -63,6 +66,7 @@ class PredictionCategoriesSection extends StatelessWidget {
     ),
     _CardConfig(
       title: 'Predictions',
+      iconPath: 'assets/icons/predictions.png',
       icon: Icons.whatshot,
       color: AppTheme.accentGold,
       targetScreen: const PredictionsScreen(),
@@ -71,6 +75,7 @@ class PredictionCategoriesSection extends StatelessWidget {
     ),
     _CardConfig(
       title: 'Tip of Day',
+      iconPath: 'assets/icons/tip_of_the_day.png',
       icon: Icons.star,
       color: AppTheme.accentGold,
       targetScreen: const BetOfDayScreen(),
@@ -79,6 +84,7 @@ class PredictionCategoriesSection extends StatelessWidget {
     ),
     _CardConfig(
       title: 'Multi Combinations',
+      iconPath: 'assets/icons/multicombo.png',
       icon: Icons.sports_soccer,
       color: blueColor,
       targetScreen: const DailyAccumulatorScreen(),
@@ -89,6 +95,7 @@ class PredictionCategoriesSection extends StatelessWidget {
     ),
     _CardConfig(
       title: 'BTTS & Win',
+      iconPath: 'assets/icons/bttswin.jpg',
       icon: Icons.sports_soccer,
       color: blueColor,
       targetScreen: const BttsWinScreen(),
@@ -99,6 +106,7 @@ class PredictionCategoriesSection extends StatelessWidget {
     ),
     _CardConfig(
       title: 'BTTS',
+      iconPath: 'assets/icons/btts.jpg',
       icon: Icons.sports_soccer,
       color: blueColor,
       targetScreen: const BttsScreen(),
@@ -109,6 +117,7 @@ class PredictionCategoriesSection extends StatelessWidget {
     ),
     _CardConfig(
       title: 'Over 2.5',
+      iconPath: 'assets/icons/over_25.png',
       icon: Icons.trending_up,
       color: orangeColor,
       targetScreen: const Over25GoalsScreen(),
@@ -119,6 +128,7 @@ class PredictionCategoriesSection extends StatelessWidget {
     ),
     _CardConfig(
       title: 'Leagues',
+      iconPath: 'assets/icons/leagues.png',
       icon: Icons.emoji_events,
       color: pinkColor,
       tabIndex: 2,
@@ -172,10 +182,8 @@ class PredictionCategoriesSection extends StatelessWidget {
   }
 
   void _handleTap(BuildContext context, _CardConfig card) {
-    // Free features don't require premium
-    final isFree = card.title == 'Predictions' || card.title == 'Leagues';
-    
-    if (!isPremium && !isFree) {
+        
+    if (!isPremium) {
       onUpgradeTap();
       return;
     }
@@ -225,6 +233,7 @@ class PredictionCategoriesSection extends StatelessWidget {
               return _CategoryCard(
                 title: card.title,
                 subtitle: _getSubtitle(card),
+                iconPath: card.iconPath,
                 icon: card.icon,
                 color: card.color,
                 odds: card.oddsBuilder(provider),
@@ -241,7 +250,8 @@ class PredictionCategoriesSection extends StatelessWidget {
 class _CategoryCard extends StatelessWidget {
   final String title;
   final String subtitle;
-  final IconData icon;
+   final String? iconPath;  // Add this
+  final IconData? icon;
   final Color color;
   final String? odds;
   final VoidCallback onTap;
@@ -249,7 +259,8 @@ class _CategoryCard extends StatelessWidget {
   const _CategoryCard({
     required this.title,
     required this.subtitle,
-    required this.icon,
+    this.iconPath,  // New
+    this.icon,  
     required this.color,
     this.odds,
     required this.onTap,
@@ -280,20 +291,42 @@ class _CategoryCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Icon
+              
+// Icon with image or fallback - NO BACKGROUND
               Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [color.withOpacity(0.8), color],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2))],
-                ),
-                child: Icon(icon, size: 24, color: Colors.white),
+                width: 70,
+                height: 70,
+                child: iconPath != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.asset(
+                          iconPath!,
+                          width: 70,
+                          height: 70,
+                          fit: BoxFit.contain, // Changed from BoxFit.cover to contain
+                          errorBuilder: (context, error, stackTrace) {
+                            // Fallback to icon if image fails
+                            return Container(
+                              width: 70,
+                              height: 70,
+                              decoration: BoxDecoration(
+                                color: color.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(icon ?? Icons.help, size: 28, color: color),
+                            );
+                          },
+                        ),
+                      )
+                    : Container(
+                        width: 70,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(icon ?? Icons.help, size: 28, color: color),
+                      ),
               ),
               
               const SizedBox(height: 8),

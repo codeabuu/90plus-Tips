@@ -107,7 +107,7 @@ class LeagueMatchesResponse {
 class League {
   final String name;
   final String country;
-  final IconData icon;
+  IconData icon;
   final Color color;
   final String description;
   final String apiEndpoint;
@@ -116,7 +116,7 @@ class League {
   League({
     required this.name,
     required this.country,
-    required this.icon,
+    this.icon = Icons.sports_soccer,
     required this.color,
     required this.description,
     required this.apiEndpoint,
@@ -144,7 +144,7 @@ class League {
       color: Colors.purple,
       description: 'View predictions for the top English league',
       apiEndpoint: 'epl-matches/',
-      // imagePath: 'assets/images/EPL.png',
+      imagePath: 'assets/images/EPL.png',
     ),
     League(
       name: 'Spanish La Liga',
@@ -153,7 +153,7 @@ class League {
       color: Colors.orange,
       description: 'Spanish football predictions and insights',
       apiEndpoint: 'laliga-matches/',
-      // imagePath: 'assets/images/LALIGA.png',
+      imagePath: 'assets/images/LALIGA.png',
     ),
     League(
       name: 'Italian Serie A',
@@ -162,7 +162,7 @@ class League {
       color: Colors.blue,
       description: 'Italian Serie A match predictions',
       apiEndpoint: 'serie-a-matches/',
-      // imagePath: 'assets/images/SERIE.png',
+      imagePath: 'assets/images/SERIE.png',
     ),
     League(
       name: 'German Bundesliga',
@@ -171,7 +171,7 @@ class League {
       color: Colors.red,
       description: 'German Bundesliga expert tips',
       apiEndpoint: 'bundesliga-matches/',
-      // imagePath: 'assets/images/BUNDESLIGA.png',
+      imagePath: 'assets/images/BUNDESLIGA.png',
     ),
     League(
       name: 'French Ligue 1',
@@ -180,7 +180,7 @@ class League {
       color: Colors.blue,
       description: 'French Ligue 1 predictions',
       apiEndpoint: 'ligue1-matches/',
-      // imagePath: 'assets/images/LIGUE1.png',
+      imagePath: 'assets/images/LIGUE1.png',
     ),
     League(
       name: 'UEFA Champions League',
@@ -189,7 +189,7 @@ class League {
       color: Colors.indigo,
       description: 'UEFA Champions League predictions',
       apiEndpoint: 'uefa-cl-matches/',
-      // imagePath: 'assets/images/UCL.png',
+      imagePath: 'assets/images/UCL.png',
     ),
     League(
       name: 'EFL Cup',
@@ -198,7 +198,7 @@ class League {
       color: Colors.green,
       description: 'English EFL Cup predictions',
       apiEndpoint: 'efl-cup-matches/',
-      // imagePath: 'assets/images/EFL.png',
+      imagePath: 'assets/images/EFL.png',
     ),
     League(
       name: 'Eliteserien',
@@ -207,7 +207,7 @@ class League {
       color: Colors.red,
       description: 'Norwegian Eliteserien predictions',
       apiEndpoint: 'eliteserien-matches/',
-      // imagePath: 'assets/images/ELITESERIEN.png',
+      imagePath: 'assets/images/ELITESERIEN.png',
     ),
     League(
       name: 'Swedish Allsvenskan',
@@ -225,7 +225,7 @@ class League {
       color: Colors.green,
       description: 'Portuguese Liga predictions',
       apiEndpoint: 'liga-portugal-matches/',
-      // imagePath: 'assets/images/LIGAPOR.png',
+      imagePath: 'assets/images/LIGAPOR.png',
     ),
     League(
       name: 'Dutch Eredivisie',
@@ -234,7 +234,7 @@ class League {
       color: Colors.green,
       description: 'Dutch Eredivisie predictions',
       apiEndpoint: 'dutch-eredivisie-matches/',
-      // imagePath: 'assets/images/EREDIVISIE.png',
+      imagePath: 'assets/images/EREDIVISIE.png',
     ),
     League(
       name: 'Turkish Super Lig',
@@ -243,7 +243,7 @@ class League {
       color: Colors.red,
       description: 'Turkish Super Lig predictions',
       apiEndpoint: 'turkish-super-lig-matches/',
-      // imagePath: 'assets/images/SUPERLIG.png',
+      imagePath: 'assets/images/SUPERLIG.png',
     ),
     League(
       name: 'Europa League',
@@ -252,8 +252,9 @@ class League {
       color: Colors.red,
       description: 'UEFA Europa League predictions',
       apiEndpoint: 'europa-league-matches/',
-      // imagePath: 'assets/images/EUROPA.png',
+      imagePath: 'assets/images/EUROPA.png',
     ),
+    
     League(
       name: 'Scottish Premiership',
       country: 'Scotland',
@@ -261,7 +262,7 @@ class League {
       color: Colors.green,
       description: 'Scottish Premiership predictions',
       apiEndpoint: 'scottish-premiership-matches/',
-      // imagePath: 'assets/images/SCOTTISH.png',
+      imagePath: 'assets/images/SCOTTISH.png',
     ),
     League(
       name: 'World Cup Qualification',
@@ -270,7 +271,7 @@ class League {
       color: Colors.blue,
       description: 'World Cup Qualification predictions',
       apiEndpoint: 'worldcup-qualification-matches/',
-      // imagePath: 'assets/images/WCQ.jpg',
+      imagePath: 'assets/images/WCQ.jpg',
     ),
     League(
       name: 'AFCON 2025',
@@ -279,7 +280,7 @@ class League {
       color: Colors.red,
       description: 'Africa Cup of Nations predictions',
       apiEndpoint: 'afcon-2025-matches/',
-      // imagePath: 'assets/images/afcon2025.jpg',
+      imagePath: 'assets/images/afcon2025.jpg',
     ),
   ];
 }

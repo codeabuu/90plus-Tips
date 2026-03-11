@@ -15,17 +15,17 @@ extension TipTypeExtension on TipType {
   String get title {
     switch (this) {
       case TipType.betOfTheDay:
-        return '⚡ BET OF THE DAY';
+        return 'BET OF THE DAY';
       case TipType.megaAccumulator:
-        return '🎯 MEGA ACCUMULATOR';
+        return 'MEGA ACCUMULATOR';
       case TipType.bttsAndWin:
-        return '🔄 BTTS & WIN';
+        return 'BTTS & WIN';
       case TipType.goalScorer:
-        return '⚽ GOAL SCORER';
+        return 'GOAL SCORER';
       case TipType.over25Goals:
-        return '🎯 OVER 2.5 GOALS';
+        return 'OVER 2.5 GOALS';
       case TipType.btts:
-        return '🔄 BOTH TEAMS TO SCORE';
+        return 'BOTH TEAMS TO SCORE';
     }
   }
 
@@ -46,23 +46,42 @@ extension TipTypeExtension on TipType {
     }
   }
 
-  Color get color {
+  // Add image paths to match home screen icons
+  String? get imagePath {
     switch (this) {
       case TipType.betOfTheDay:
-        return Colors.amber;
+        return 'assets/icons/tip_of_the_day.png';
       case TipType.megaAccumulator:
-        return Colors.purple;
+        return 'assets/icons/multicombo.png';
       case TipType.bttsAndWin:
-        return Colors.blue;
-      case TipType.goalScorer:
-        return Colors.green;
+        return 'assets/icons/bttswin.jpg';
       case TipType.over25Goals:
-        return Colors.orange;
+        return 'assets/icons/over_25.png';
       case TipType.btts:
-        return Colors.teal;
+        return 'assets/icons/btts.jpg';
+      default:
+        return null;
     }
   }
 
+  Color get color {
+    switch (this) {
+      case TipType.betOfTheDay:
+        return AppTheme.accentGold; // Match home screen
+      case TipType.megaAccumulator:
+        return const Color(0xFF2196F3); // blueColor
+      case TipType.bttsAndWin:
+        return const Color(0xFF2196F3); // blueColor
+      case TipType.goalScorer:
+        return Colors.green;
+      case TipType.over25Goals:
+        return const Color(0xFFFF9800); // orangeColor
+      case TipType.btts:
+        return const Color(0xFF2196F3); // blueColor
+    }
+  }
+
+  // Keep icons as fallback
   IconData get icon {
     switch (this) {
       case TipType.betOfTheDay:
@@ -89,7 +108,7 @@ class TodayTipCard extends StatelessWidget {
   final VoidCallback onTap;
   final bool isLoading;
   final Widget? customContent;
-  final List<Widget>? matchesList; // New parameter for full matches list
+  final List<Widget>? matchesList;
 
   const TodayTipCard({
     super.key,
@@ -100,7 +119,7 @@ class TodayTipCard extends StatelessWidget {
     required this.onTap,
     this.isLoading = false,
     this.customContent,
-    this.matchesList, // Add this
+    this.matchesList,
   });
 
   @override
@@ -110,20 +129,20 @@ class TodayTipCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-  color: Colors.white,
-  borderRadius: BorderRadius.circular(16),
-  border: Border.all(
-    color: tipType.color.withOpacity(0.5), // slightly more visible than inner shades
-    width: 2, // thick enough to notice but not overpower
-  ),
-  boxShadow: [
-    BoxShadow(
-      color: tipType.color.withOpacity(0.1), // subtle colored shadow for depth
-      blurRadius: 12,
-      offset: const Offset(0, 4),
-    ),
-  ],
-),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: tipType.color.withOpacity(0.5),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: tipType.color.withOpacity(0.1),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Material(
@@ -138,18 +157,49 @@ class TodayTipCard extends StatelessWidget {
                     // Header Row
                     Row(
                       children: [
+                        // Icon with image or fallback - NO BACKGROUND
                         Container(
                           width: 48,
                           height: 48,
-                          decoration: BoxDecoration(
-                            color: tipType.color.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            tipType.icon,
-                            color: tipType.color,
-                            size: 24,
-                          ),
+                          child: tipType.imagePath != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.asset(
+                                    tipType.imagePath!,
+                                    width: 48,
+                                    height: 48,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      // Fallback to icon if image fails
+                                      return Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          color: tipType.color.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Icon(
+                                          tipType.icon,
+                                          size: 24,
+                                          color: tipType.color,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                )
+                              : Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: tipType.color.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    tipType.icon,
+                                    size: 24,
+                                    color: tipType.color,
+                                  ),
+                                ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -215,7 +265,7 @@ class TodayTipCard extends StatelessWidget {
                     
                     const SizedBox(height: 16),
                     
-                    // Content Area - Show full matches list if provided
+                    // Content Area
                     if (isLoading)
                       const Center(
                         child: Padding(
@@ -228,7 +278,6 @@ class TodayTipCard extends StatelessWidget {
                         children: [
                           ...matchesList!,
                           const SizedBox(height: 8),
-                          // Total Odds at the bottom for accumulators
                           if (odds != null && odds != '0' && odds != '0.0')
                             Row(
                               mainAxisAlignment: MainAxisAlignment.end,
@@ -257,7 +306,6 @@ class TodayTipCard extends StatelessWidget {
                     else
                       _buildDefaultContent(),
                     
-                    // Match Count Badge (if no matches list but we have count)
                     if (matchCount != null && 
                         matchCount! > 0 && 
                         (matchesList == null || matchesList!.isEmpty))
@@ -371,7 +419,7 @@ class TodayTipCard extends StatelessWidget {
   }
 }
 
-// Match Preview Tile for displaying individual matches
+// Match Preview Tile
 class MatchPreviewTile extends StatelessWidget {
   final String homeTeam;
   final String awayTeam;
