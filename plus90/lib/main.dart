@@ -11,7 +11,8 @@ import 'providers/predictions_provider.dart';
 import 'providers/subscription_provider.dart';
 import 'theme/app_theme.dart';
 import 'widgets/upgrade_modal.dart';
-import 'services/local_notification_service.dart'; // Add this import
+import 'services/local_notification_service.dart';
+import './screens/splashscreen.dart';
 
 
 void main() async {
@@ -23,6 +24,7 @@ void main() async {
   
   // Load environment variables
   await dotenv.load(fileName: "assets/.env");
+  print("ENV TEST: ${dotenv.env['BACKEND_URL']}");
   
   runApp(const MyApp());
 }

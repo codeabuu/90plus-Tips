@@ -15,7 +15,7 @@ import 'cache_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiService {
-  static final String baseUrl = dotenv.env['BACKEND_URL']!;
+  final String baseUrl = dotenv.get('BACKEND_URL');
   
   final Map<String, String> _headers = {
     'Content-Type': 'application/json',
