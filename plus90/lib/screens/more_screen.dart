@@ -25,7 +25,7 @@ class MoreScreen extends StatefulWidget {
 class _MoreScreenState extends State<MoreScreen> {
   void _shareApp() async {
   const String playStoreUrl =
-      'https://play.google.com/store/apps/details?id=com.troncores.scorewise';
+      'https://play.google.com/store/apps/details?id=com.troncores.plus90';
 
   final String message =
       "⚽ Winning starts with smart predictions!\n\n"
@@ -44,7 +44,7 @@ class _MoreScreenState extends State<MoreScreen> {
 
 void _rateApp() async {
   final Uri url = Uri.parse(
-    'https://play.google.com/store/apps/details?id=com.troncores.scorewise',
+    'https://play.google.com/store/apps/details?id=com.troncores.plus90',
   );
 
   if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
@@ -237,14 +237,7 @@ Widget build(BuildContext context) {
                         color: AppTheme.primaryNavy,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Version 2.1.4',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                    ),
+                    
                     const SizedBox(height: 16),
                     const Text(
                       'Data-driven football predictions from expert analysts. '
@@ -338,20 +331,7 @@ Widget build(BuildContext context) {
                         height: 1.5,
                       ),
                     ),
-                    // const SizedBox(height: 16),
-                    // SizedBox(
-                    //   width: double.infinity,
-                    //   child: OutlinedButton(
-                    //     onPressed: () {
-                    //       // Show gambling help resources
-                    //     },
-                    //     style: OutlinedButton.styleFrom(
-                    //       side: const BorderSide(color: AppTheme.mutedRed),
-                    //       foregroundColor: AppTheme.mutedRed,
-                    //     ),
-                    //     child: const Text('Get Help & Support'),
-                    //   ),
-                    // ),
+                    
                   ],
                 ),
               ),

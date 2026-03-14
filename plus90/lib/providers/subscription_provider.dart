@@ -26,44 +26,71 @@ class SubscriptionProvider with ChangeNotifier {
     return await _revenueCat.getAppUserId();
   }
   
-  // Initialize
-  Future<void> initialize() async {
-    if (_isInitialized) return;
+// In SubscriptionProvider
+
+Future<void> initialize() async {
+  if (_isInitialized) return;
+  
+  _isLoading = true;
+  notifyListeners();
+  
+  try {
+    debugPrint('🔄 Initializing RevenueCat service...');
+    await _revenueCat.initialize();
+    debugPrint('✅ RevenueCat service initialized');
     
-    _isLoading = true;
-    notifyListeners();
-    
-    try {
-      await _revenueCat.initialize();
-      
-      // Listen to premium status changes
-      _revenueCat.premiumStatusStream.listen((premium) {
-        _isPremium = premium;
-        _subscriptionInfo = _revenueCat.getSubscriptionInfo();
-        notifyListeners();
-      });
-      
-      // Listen to packages updates
-      _revenueCat.packagesStream.listen((packages) {
-        _packages = packages;
-        notifyListeners();
-      });
-      
-      // Set initial state
-      _isPremium = _revenueCat.isPremium;
+    // Listen to premium status changes
+    _revenueCat.premiumStatusStream.listen((premium) {
+      _isPremium = premium;
       _subscriptionInfo = _revenueCat.getSubscriptionInfo();
-      _packages = _revenueCat.availablePackages;
-      
-      _isInitialized = true;
-      debugPrint('✅ SubscriptionProvider initialized. Premium: $_isPremium');
-    } catch (e) {
-      debugPrint('❌ Error initializing SubscriptionProvider: $e');
-    } finally {
-      _isLoading = false;
       notifyListeners();
-    }
+    });
+    
+    // Listen to packages updates
+    _revenueCat.packagesStream.listen((packages) {
+      _packages = packages;
+      notifyListeners();
+    });
+    
+    // Set initial state
+    _isPremium = _revenueCat.isPremium;
+    _subscriptionInfo = _revenueCat.getSubscriptionInfo();
+    _packages = _revenueCat.availablePackages;
+    
+    _isInitialized = true;
+    debugPrint('✅ SubscriptionProvider initialized. Premium: $_isPremium');
+    debugPrint('📦 Packages loaded: ${_packages.length}');
+  } catch (e) {
+    debugPrint('❌ Error initializing SubscriptionProvider: $e');
+    _isInitialized = false;
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
+  
+  // Add to SubscriptionProvider
+
+Future<void> debugSubscriptionState() async {
+  debugPrint('🔍 ===== SUBSCRIPTION DEBUG =====');
+  debugPrint('isInitialized: $_isInitialized');
+  debugPrint('isLoading: $_isLoading');
+  debugPrint('isPremium: $_isPremium');
+  debugPrint('packages count: ${_packages.length}');
+  
+  if (_subscriptionInfo != null) {
+    debugPrint('subscriptionInfo: $_subscriptionInfo');
   }
   
+  // Print all packages
+  for (var package in _packages) {
+    debugPrint('📦 Package: ${package.identifier}');
+    debugPrint('  - Price: ${package.storeProduct.priceString}');
+    debugPrint('  - Title: ${package.storeProduct.title}');
+  }
+  
+  debugPrint('🔍 ===== END DEBUG =====');
+}
   // ✅ UPDATED: Return type changed to CustomPurchaseResult
   Future<CustomPurchaseResult> purchasePackage(Package package) async {
     _isLoading = true;

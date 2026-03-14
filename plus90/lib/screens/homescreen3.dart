@@ -11,6 +11,74 @@ import '../providers/predictions_provider.dart';
 import '../theme/app_theme.dart';
 import 'homescreen2.dart';
 import '../widgets/dotanimate.dart';
+import '../screens/termsnconds.dart';
+import '../screens/privacypolicy.dart';
+
+// Simplified countdown timer - no box, just text in gray
+class LoadingCountdown extends StatefulWidget {
+  final VoidCallback onComplete;
+  
+  const LoadingCountdown({required this.onComplete});
+
+  @override
+  State<LoadingCountdown> createState() => _LoadingCountdownState();
+}
+
+class _LoadingCountdownState extends State<LoadingCountdown> {
+  int _secondsRemaining = 13;
+  bool _isCompleted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startCountdown();
+  }
+
+  void _startCountdown() {
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted && _secondsRemaining > 1) {
+        setState(() {
+          _secondsRemaining--;
+        });
+        _startCountdown();
+      } else if (mounted && _secondsRemaining == 1) {
+        setState(() {
+          _isCompleted = true;
+        });
+        widget.onComplete();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isCompleted) return const SizedBox.shrink();
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Text(
+            'Loading all tips... ',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          Text(
+            '${_secondsRemaining}s',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[800],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 // Card Configuration - Single source of truth
 class _CardConfig {
@@ -210,6 +278,12 @@ class PredictionCategoriesSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Simple gray loading text with countdown
+          LoadingCountdown(
+            onComplete: () {
+              // Optional: Trigger any action when countdown completes
+            },
+          ),
           Row(
             children: [
               Text('Browse Predictions', style: Theme.of(context).textTheme.displaySmall),
@@ -564,20 +638,51 @@ class ResponsibleGamblingFooter extends StatelessWidget {
       children: [
         const Icon(Icons.shield, size: 28, color: AppTheme.primaryNavy),
         const SizedBox(height: 8),
-        const Text('Responsible Gambling', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.primaryNavy)),
+        const Text('Responsible Usage', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.primaryNavy)),
         const SizedBox(height: 6),
         const Text(
-          'This app provides predictions for entertainment purposes. Please gamble responsibly and within your means.',
+          'This app provides predictions for entertainment purposes. Please use them responsibly and within your means.',
           style: TextStyle(fontSize: 12),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 8),
-        TextButton(
-          onPressed: null,
-          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6)),
-          child: const Text('Gamble Aware Resources', style: TextStyle(fontSize: 12)),
-        ),
+               Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          TextButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TermsScreen()),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Terms & Conditions',
+              style: TextStyle(fontSize: 10, color: Colors.blue),
+            ),
+          ),
+          const Text('|', style: TextStyle(fontSize: 10, color: Colors.grey)),
+          TextButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Privacy Policy',
+              style: TextStyle(fontSize: 10, color: Colors.blue),
+            ),
+          ),
+        ],
+      ),
       ],
     ),
   );
+  
 }

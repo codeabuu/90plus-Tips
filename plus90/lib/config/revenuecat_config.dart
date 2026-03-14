@@ -1,16 +1,16 @@
-// config/revenuecat_config.dart
 class RevenueCatConfig {
-  // Entitlement ID - Use your test entitlement ID
-  static const String premiumEntitlementId = '90plus Pro'; // or whatever your test entitlement is called
-  
-  // Product IDs - Use your test product IDs from RevenueCat dashboard
+
+  // Must match your RevenueCat entitlement identifier
+  static const String premiumEntitlementId = '90plus Pro';
+
+  // Must match the Play Store product IDs
   static const Map<String, String> productIds = {
-    'weekly': 'weekly_sub',      // Your test weekly product ID
-    'monthly': 'monthly_sub',    // Your test monthly product ID
-    'yearly': 'yearly_sub',      // Your test yearly product ID 
-    '3_months': '3_months',  // Your test 3 months product ID
+    'weekly': 'weekly_plans:weekly',
+    'monthly': 'monthly:monthly-base',
+    '3_months': '3months_plans:three-month-base',
+    'yearly': 'yearly_plans:yearly-base',
   };
-  
-  // Offerings ID (optional - if you have multiple offerings)
-  static const String offeringsId = 'myoffering';
+
+  // Must match the offering ID in RevenueCat (probably 'default')
+  static const String offeringsId = 'default';
 }

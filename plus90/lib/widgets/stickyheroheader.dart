@@ -67,7 +67,7 @@ class StickyHeroHeader extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    'Premium Predictions',
+                    '90plus Tips',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,

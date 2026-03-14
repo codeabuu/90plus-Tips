@@ -3,181 +3,272 @@ import 'package:provider/provider.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../providers/subscription_provider.dart';
 import '../theme/app_theme.dart';
+import '../screens/termsnconds.dart';
+import '../screens/privacypolicy.dart';
 
 class RevenueCatPurchaseModal extends StatelessWidget {
   const RevenueCatPurchaseModal({super.key});
+
+  Future<void> _debugSubscriptionState(BuildContext context, SubscriptionProvider provider) async {
+    print('🔍 ===== SUBSCRIPTION DEBUG =====');
+    print('isInitialized: ${provider.isInitialized}');
+    print('isLoading: ${provider.isLoading}');
+    print('isPremium: ${provider.isPremium}');
+    print('packages count: ${provider.packages.length}');
+    if (provider.subscriptionInfo != null) print('subscriptionInfo: ${provider.subscriptionInfo}');
+    for (var package in provider.packages) {
+      print('📦 Package: ${package.identifier}');
+      print('  - Price: ${package.storeProduct.priceString}');
+      print('  - Title: ${package.storeProduct.title}');
+      print('  - Description: ${package.storeProduct.description}');
+    }
+    try {
+      final offerings = await Purchases.getOfferings();
+      print('📦 All offerings: ${offerings.all.keys}');
+      print('📦 Current offering: ${offerings.current?.identifier}');
+      if (offerings.current != null) {
+        print('📦 Packages in current offering: ${offerings.current!.availablePackages.length}');
+      }
+    } catch (e) {
+      print('❌ Error fetching offerings: $e');
+    }
+    print('🔍 ===== END DEBUG =====');
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Debug info printed. Packages found: ${provider.packages.length}'),
+        backgroundColor: Colors.blue,
+        duration: const Duration(seconds: 3),
+      ));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.all(16),
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
       decoration: BoxDecoration(
-        color: AppTheme.cardBackground, // Changed from Colors.white to AppTheme.cardBackground
-        borderRadius: BorderRadius.circular(24),
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 30, offset: const Offset(0, 10)),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Close Button
+            // Close button
             Align(
               alignment: Alignment.topRight,
               child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.grey),
+                icon: const Icon(Icons.close, color: Colors.grey, size: 20),
                 onPressed: () => Navigator.pop(context),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
             ),
 
-            // Premium Icon
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.accentGreen.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.workspace_premium,
-                size: 32,
-                color: AppTheme.accentGreen,
-              ),
+            const SizedBox(height: 4),
+
+            // ✅ Icon + Title inline
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentGreen.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.workspace_premium, size: 20, color: AppTheme.accentGreen),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Go Premium',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primaryNavy)),
+                      const Text('Unlock all xpert predictions & advanced stats',
+                          style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+              ],
             ),
 
-            const SizedBox(height: 16),
+            const Divider(height: 20),
 
-            // Title
-            Text(
-              'Go Premium',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.primaryNavy,
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Description
-            const Text(
-              'Unlock expert predictions, advanced statistics, and premium features',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-              textAlign: TextAlign.center,
-            ),
-
-            const SizedBox(height: 24),
-
-            // Loading indicator if packages not loaded
+            // Pricing plans
             Consumer<SubscriptionProvider>(
               builder: (context, provider, child) {
+                if (!provider.isInitialized && !provider.isLoading) {
+                  return _buildErrorState(
+                    context, provider,
+                    'Failed to connect to payment service',
+                    'Check your connection and try again',
+                    Colors.red,
+                    onRetry: () => provider.initialize(),
+                  );
+                }
                 if (!provider.isInitialized || provider.isLoading) {
-                  return CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentGreen),
-                  );
+                  return _buildLoadingState(context, provider);
                 }
-
                 if (provider.packages.isEmpty) {
-                  return Column(
-                    children: [
-                      const Text(
-                        'No subscription plans available',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => provider.refreshPackages(),
-                        child: const Text('Retry'),
-                      ),
-                    ],
+                  return _buildErrorState(
+                    context, provider,
+                    'No subscription plans available',
+                    'Connection issue or no products configured',
+                    Colors.orange,
+                    onRetry: () => provider.refreshPackages(),
                   );
                 }
-
                 return _buildPricingPlans(context, provider);
               },
             ),
 
-            const SizedBox(height: 24),
+            const Divider(height: 20),
 
-            // Features
-            _buildFeature('50+ daily predictions'),
-            _buildFeature('Major leagues & competitions'),
-            _buildFeature('Accumulator builder'),
-            _buildFeature('Instant notifications'),
+            // ✅ Features in 2-column grid
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 5,
+              mainAxisSpacing: 4,
+              crossAxisSpacing: 4,
+              children: [
+                _buildFeature('50+ daily predictions'),
+                _buildFeature('Major leagues & competitions'),
+                _buildFeature('Accumulator builder'),
+                _buildFeature('Instant notifications'),
+              ],
+            ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
 
-            // Restore Purchases Button
+            // Restore Purchases
             Consumer<SubscriptionProvider>(
               builder: (context, provider, child) {
-                return TextButton(
-                  onPressed: provider.isLoading
-                      ? null
-                      : () async {
-                          final result = await provider.restorePurchases();
-                          
-                          if (!context.mounted) return;
-                          
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(result.success
-                                  ? 'Purchases restored successfully!'
-                                  : result.error ?? 'Failed to restore purchases'),
-                              backgroundColor: result.success
-                                  ? AppTheme.accentGreen
-                                  : AppTheme.mutedRed,
-                            ),
-                          );
-                          
-                          if (result.success && provider.isPremium) {
-                            Navigator.pop(context);
-                          }
-                        },
-                  child: Text(
-                    'Restore Purchases',
-                    style: TextStyle(
-                      color: AppTheme.primaryNavy,
-                    ),
+                return Center(
+                  child: TextButton(
+                    onPressed: provider.isLoading ? null : () => _handleRestore(context, provider),
+                    child: Text('Restore Purchases',
+                        style: TextStyle(fontSize: 12, color: AppTheme.primaryNavy)),
                   ),
                 );
               },
             ),
 
-            const SizedBox(height: 8),
-
-            // Terms and Privacy
-            Text(
-              'Subscription automatically renews unless canceled. Cancel anytime.',
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey,
+            
+            Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          TextButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TermsScreen()),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Terms & Conditions',
+              style: TextStyle(fontSize: 10, color: Colors.blue),
+            ),
+          ),
+          const Text('|', style: TextStyle(fontSize: 10, color: Colors.grey)),
+          TextButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Privacy Policy',
+              style: TextStyle(fontSize: 10, color: Colors.blue),
+            ),
+          ),
+        ],
+      ),
+                ],
               ),
-              textAlign: TextAlign.center,
+            ),
+          );
+        }
+
+  Widget _buildLoadingState(BuildContext context, SubscriptionProvider provider) {
+    return Column(
+      children: [
+        const CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentGreen),
+        ),
+        const SizedBox(height: 12),
+       
+        TextButton(
+          onPressed: () => _debugSubscriptionState(context, provider),
+          child: const Text('Debug'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildErrorState(
+    BuildContext context,
+    SubscriptionProvider provider,
+    String title,
+    String subtitle,
+    Color color, {
+    required VoidCallback onRetry,
+  }) {
+    return Column(
+      children: [
+        Icon(Icons.error_outline, size: 40, color: color),
+        const SizedBox(height: 12),
+        Text(title,
+            style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center),
+        const SizedBox(height: 6),
+        Text(subtitle,
+            style: const TextStyle(fontSize: 13, color: Colors.grey),
+            textAlign: TextAlign.center),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: onRetry,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentGreen,
+                foregroundColor: AppTheme.primaryNavy,
+              ),
+              child: const Text('Retry'),
+            ),
+            const SizedBox(width: 12),
+            TextButton(
+              onPressed: () => _debugSubscriptionState(context, provider),
+              child: const Text('Debug'),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildPricingPlans(BuildContext context, SubscriptionProvider provider) {
-    // Find packages by keywords, not exact identifiers
-    Package? weeklyPackage;
-    Package? monthlyPackage;
-    Package? threeMonthPackage;
-    Package? yearlyPackage;
-    
+    Package? weeklyPackage, monthlyPackage, threeMonthPackage, yearlyPackage;
+
     for (var pkg in provider.packages) {
       final id = pkg.identifier.toLowerCase();
-      
       if (id.contains('week')) {
         weeklyPackage = pkg;
       } else if (id.contains('month') && !id.contains('3month') && !id.contains('three')) {
@@ -189,306 +280,201 @@ class RevenueCatPurchaseModal extends StatelessWidget {
       }
     }
 
-    // Calculate savings for yearly vs monthly if both exist
     String? savings;
     if (monthlyPackage != null && yearlyPackage != null) {
       savings = provider.calculateSavings(monthlyPackage, yearlyPackage);
     }
 
-    return Container(
-      constraints: const BoxConstraints(maxHeight: 420),
-      child: Scrollbar(
-        thumbVisibility: true,
-        thickness: 6,
-        radius: const Radius.circular(10),
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            children: [
-              if (weeklyPackage != null) ...[
-                _buildPlanCard(
-                  context: context,
-                  provider: provider,
-                  package: weeklyPackage,
-                  title: 'Weekly',
-                  subtitle: 'Try before you commit',
-                  isRecommended: false,
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (monthlyPackage != null) ...[
-                _buildPlanCard(
-                  context: context,
-                  provider: provider,
-                  package: monthlyPackage,
-                  title: 'Monthly',
-                  subtitle: 'Flexible',
-                  isRecommended: false,
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (threeMonthPackage != null) ...[
-                _buildPlanCard(
-                  context: context,
-                  provider: provider,
-                  package: threeMonthPackage,
-                  title: '3 Months',
-                  subtitle: 'Popular choice',
-                  isRecommended: true, // Changed to true for 3-month plan
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (yearlyPackage != null) ...[
-                _buildPlanCard(
-                  context: context,
-                  provider: provider,
-                  package: yearlyPackage,
-                  title: 'Yearly',
-                  subtitle: 'Best Value',
-                  isRecommended: true,
-                  savings: savings,
-                ),
-              ],
-              const SizedBox(height: 8),
-            ],
+    // ✅ No fixed height container — parent SingleChildScrollView handles it
+    return Column(
+      children: [
+        if (weeklyPackage != null) ...[
+          _buildPlanCard(
+            context: context, provider: provider, package: weeklyPackage,
+            title: 'Weekly', subtitle: 'Try before you commit',
           ),
-        ),
-      ),
+          const SizedBox(height: 8),
+        ],
+        if (monthlyPackage != null) ...[
+          _buildPlanCard(
+            context: context, provider: provider, package: monthlyPackage,
+            title: 'Monthly', subtitle: 'Flexible',
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (threeMonthPackage != null) ...[
+          _buildPlanCard(
+            context: context, provider: provider, package: threeMonthPackage,
+            title: '3 Months', subtitle: 'Popular choice',
+            badge: 'Popular', badgeColor: AppTheme.accentGreen,
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (yearlyPackage != null)
+          _buildPlanCard(
+            context: context, provider: provider, package: yearlyPackage,
+            title: 'Yearly', subtitle: 'Best value',
+            badge: savings, badgeColor: AppTheme.accentGold, badgeOnRight: true,
+          ),
+      ],
     );
   }
 
-Widget _buildPlanCard({
-  required BuildContext context,
-  required SubscriptionProvider provider,
-  required Package package,
-  required String title,
-  required String subtitle,
-  required bool isRecommended,
-  String? savings,
-}) {
-  
-  // Check if package has a free trial
-  String? trialText;
-  Color? trialColor;
-  
-  if (package.storeProduct.introductoryPrice != null) {
-    final introPrice = package.storeProduct.introductoryPrice!;
-    if (introPrice.price == 0.0) {
-      // Parse period string (e.g., "P7D" = 7 days, "P1M" = 1 month)
-      String period = introPrice.period;
-      
-      if (period.contains('D')) {
-        final days = period.replaceAll('P', '').replaceAll('D', '');
-        trialText = '$days-day free trial';
-        trialColor = Colors.blue;
-      } else if (period.contains('W')) {
-        final weeks = period.replaceAll('P', '').replaceAll('W', '');
-        trialText = '$weeks-week free trial';
-        trialColor = Colors.purple;
-      } else if (period.contains('M')) {
-        final months = period.replaceAll('P', '').replaceAll('M', '');
-        trialText = '$months-month free trial';
-        trialColor = Colors.orange;
+  // ✅ Compact single-row card: [title+subtitle] LEFT | [price+period] + [button] RIGHT
+  Widget _buildPlanCard({
+    required BuildContext context,
+    required SubscriptionProvider provider,
+    required Package package,
+    required String title,
+    required String subtitle,
+    String? badge,
+    Color? badgeColor,
+    bool badgeOnRight = false,
+  }) {
+    String? trialText;
+    Color? trialColor;
+
+    try {
+      if (package.storeProduct.introductoryPrice != null) {
+        final introPrice = package.storeProduct.introductoryPrice!;
+        if (introPrice.price == 0.0) {
+          final period = introPrice.period;
+          if (period.contains('D')) {
+            trialText = '${period.replaceAll('P', '').replaceAll('D', '')}d free';
+            trialColor = Colors.blue;
+          } else if (period.contains('W')) {
+            trialText = '${period.replaceAll('P', '').replaceAll('W', '')}w free';
+            trialColor = Colors.purple;
+          } else if (period.contains('M')) {
+            trialText = '${period.replaceAll('P', '').replaceAll('M', '')}m free';
+            trialColor = Colors.orange;
+          }
+        }
+      }
+    } catch (e) {
+      print('❌ Error parsing trial info: $e');
+    }
+
+    // Trial text overrides badge if present
+    final effectiveBadge = trialText ?? badge;
+    final effectiveColor = trialText != null ? trialColor! : (badgeColor ?? AppTheme.accentGreen);
+    final showBadge = effectiveBadge != null;
+    // Trial badge always shows on left; savings badge on right
+    final isBadgeOnRight = trialText == null && badgeOnRight;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        GestureDetector(
+          onTap: () => _purchasePackage(context, provider, package),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppTheme.cardBackground,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: showBadge ? effectiveColor.withOpacity(0.5) : AppTheme.neutralGray,
+                width: showBadge ? 1.5 : 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                // Left: title + subtitle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryNavy)),
+                      Text(subtitle,
+                          style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+                // Right: price + period
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(provider.getFormattedPrice(package),
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w700,
+                            color: AppTheme.primaryNavy)),
+                    Text(provider.getSubscriptionPeriod(package),
+                        style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
+                ),
+                const SizedBox(width: 8),
+                // Button
+                ElevatedButton(
+                  onPressed: () => _purchasePackage(context, provider, package),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: trialText != null ? trialColor : AppTheme.accentGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  child: Text(trialText != null ? 'Try Free' : 'Select'),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Badge floats above the card border
+        if (showBadge)
+          Positioned(
+            top: -9,
+            left: isBadgeOnRight ? null : 10,
+            right: isBadgeOnRight ? 10 : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: effectiveColor,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                effectiveBadge!,
+                style: const TextStyle(
+                    fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _handleRestore(BuildContext context, SubscriptionProvider provider) async {
+    try {
+      final result = await provider.restorePurchases();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result.success
+            ? 'Purchases restored successfully!'
+            : result.error ?? 'Failed to restore purchases'),
+        backgroundColor: result.success ? AppTheme.accentGreen : AppTheme.mutedRed,
+      ));
+      if (result.success && provider.isPremium) Navigator.pop(context);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: AppTheme.mutedRed,
+        ));
       }
     }
   }
 
-  return GestureDetector(
-    onTap: () => _purchasePackage(context, provider, package),
-    child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: trialText != null 
-              ? trialColor!.withOpacity(0.5) 
-              : (isRecommended ? AppTheme.accentGreen : AppTheme.neutralGray),
-          width: trialText != null ? 2 : (isRecommended ? 2 : 1),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: trialText != null 
-                ? trialColor!.withOpacity(0.1)
-                : Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Savings Badge (top-right)
-          if (isRecommended && savings != null)
-            Positioned(
-              top: -8,
-              right: -8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppTheme.accentGold,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  savings,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.primaryNavy,
-                  ),
-                ),
-              ),
-            ),
-          
-          // Free Trial Badge (top-left)
-          if (trialText != null)
-            Positioned(
-              top: -8,
-              left: -8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      trialColor!.withOpacity(0.8),
-                      trialColor,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: trialColor.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.card_giftcard,
-                      size: 12,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      trialText,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.primaryNavy,
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (isRecommended && savings == null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentGreen.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'POPULAR',
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.accentGreen,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              
-              const SizedBox(height: 16),
-              
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        provider.getFormattedPrice(package),
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.primaryNavy,
-                        ),
-                      ),
-                      Text(
-                        provider.getSubscriptionPeriod(package),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                  ElevatedButton(
-                    onPressed: () => _purchasePackage(context, provider, package),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: trialText != null 
-                          ? trialColor 
-                          : AppTheme.accentGreen,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: Text(
-                      trialText != null ? 'Try Free' : 'Select',
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-  Future<void> _purchasePackage(BuildContext context, SubscriptionProvider provider, Package package) async {
-    final result = await provider.purchasePackage(package);
-    
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+  Future<void> _purchasePackage(
+      BuildContext context, SubscriptionProvider provider, Package package) async {
+    try {
+      final result = await provider.purchasePackage(package);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(result.success
               ? 'Purchase successful!'
               : result.isCancelled
@@ -499,37 +485,29 @@ Widget _buildPlanCard({
               : result.isCancelled
                   ? AppTheme.accentGold
                   : AppTheme.mutedRed,
-        ),
-      );
-      
-      if (result.success) {
-        Navigator.pop(context);
+        ));
+        if (result.success) Navigator.pop(context);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: AppTheme.mutedRed,
+        ));
       }
     }
   }
 
   Widget _buildFeature(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(
-            Icons.check_circle, 
-            size: 20, 
-            color: AppTheme.accentGreen,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.primaryNavy,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return Row(
+      children: [
+        Icon(Icons.check, size: 13, color: AppTheme.accentGreen),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(text,
+              style: const TextStyle(fontSize: 12, color: AppTheme.primaryNavy)),
+        ),
+      ],
     );
   }
 }

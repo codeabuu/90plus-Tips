@@ -1,4 +1,4 @@
-package com.example.plus90
+package com.troncore.plus90
 
 import io.flutter.embedding.android.FlutterActivity
 

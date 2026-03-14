@@ -340,7 +340,7 @@ class _FreeTipRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _buildPredictionBadge(),
-        _buildOddsBadge(),
+        // _buildOddsBadge(),
       ],
     );
   }

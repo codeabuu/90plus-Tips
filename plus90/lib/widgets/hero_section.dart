@@ -59,7 +59,7 @@ class HeroSection extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      'Premium Predictions',
+                      '90plus Tips',
                       style: Theme.of(context).textTheme.displayLarge!.copyWith(
                             color: Colors.white,
                             fontSize: 20,
@@ -242,7 +242,7 @@ class StickyHeroHeader extends StatelessWidget {
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
-                    'Premium Predictions',
+                    '90plus Tips',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 20,
