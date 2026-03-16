@@ -10,6 +10,7 @@ import 'termsnconds.dart';
 import 'privacypolicy.dart';
 import 'methodology.dart';
 import '../widgets/profile_dropdown.dart';
+import '../services/notification_toggle_service.dart';
 
 
 class MoreScreen extends StatefulWidget {
@@ -51,6 +52,66 @@ void _rateApp() async {
     throw 'Could not launch $url';
   }
 }
+
+// Add this method to build the notification toggle
+Widget _buildNotificationToggleItem() {
+  return FutureBuilder<bool>(
+    future: NotificationToggleService.isNotificationEnabled(),
+    builder: (context, snapshot) {
+      final isEnabled = snapshot.data ?? false;
+      
+      return ListTile(
+        leading: Icon(
+          isEnabled ? Icons.notifications_active : Icons.notifications_off,
+          color: AppTheme.primaryNavy, // Same navy color as all other icons
+        ),
+        title: Text(
+          'Notifications',
+          style: const TextStyle(
+            fontSize: 14,
+            color: AppTheme.primaryNavy, // Same navy color as all other titles
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isEnabled ? 'On' : 'Off',
+              style: TextStyle(
+                fontSize: 14,
+                color: isEnabled ? AppTheme.primaryNavy : Colors.grey, // Navy when On, Grey when Off
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Transform.scale(
+              scale: 0.7, // Reduces size to 70% of original
+              child: Switch(
+                value: isEnabled,
+                onChanged: (value) async {
+                  await NotificationToggleService.openNotificationSettings(context);
+                  setState(() {});
+                },
+                activeColor: AppTheme.primaryNavy,
+                activeTrackColor: AppTheme.primaryNavy.withOpacity(0.3),
+                inactiveThumbColor: Colors.grey,
+                inactiveTrackColor: Colors.grey.withOpacity(0.3),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, // Reduces tap area
+              ),
+            ),
+          ],
+        ),
+        onTap: () async {
+          // Also open settings when tapping the whole tile
+          await NotificationToggleService.openNotificationSettings(context);
+          setState(() {});
+        },
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16), // Same as other items
+      );
+    },
+  );
+}
+
   @override
 Widget build(BuildContext context) {
   return Scaffold(
@@ -97,6 +158,7 @@ Widget build(BuildContext context) {
 
               const ProfileDropdown(),
               _buildSettingsSection(context, 'APP', [
+                _buildNotificationToggleItem(),
                 _buildSettingsItem(
                   icon: Icons.language,
                   title: 'Language',
@@ -275,7 +337,7 @@ Widget build(BuildContext context) {
                     ),
                     const SizedBox(height: 12),
                     _buildCommitmentItem('Transparent success tracking'),
-                    _buildCommitmentItem('Responsible gambling advocacy'),
+                    _buildCommitmentItem('Responsible usage advocacy'),
                     _buildCommitmentItem('Expert analysis, not guesses'),
                     _buildCommitmentItem('No hidden fees or tricks'),
                     _buildCommitmentItem('Real customer support'),

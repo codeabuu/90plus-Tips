@@ -226,7 +226,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'SCOREWISE',
+                  '90PLUS TIPS',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

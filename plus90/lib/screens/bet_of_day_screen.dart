@@ -145,9 +145,9 @@ class _BetOfDayScreenState extends State<BetOfDayScreen> {
           // Title
           Expanded(
             child: Text(
-              'SCOREWISE',
+              '90PLUS TIPS',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.amber[800],
                 letterSpacing: 1.5,
@@ -179,9 +179,9 @@ Widget _buildAccumulatorCard(BetOfDayAccumulator accumulator) {
           // Title Only (centered)
           Center(
             child: Text(
-              accumulator.type ?? 'Bet of the Day',
+              accumulator.type ?? 'Tip of the Day',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: Colors.amber[800],
               ),
@@ -229,7 +229,7 @@ Widget _buildAccumulatorCard(BetOfDayAccumulator accumulator) {
                   Text(
                     'FEATURED PICK OF THE DAY',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                       letterSpacing: 0.5,

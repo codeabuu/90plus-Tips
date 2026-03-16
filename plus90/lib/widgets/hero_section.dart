@@ -2,17 +2,85 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/subscription_provider.dart';
 import '../theme/app_theme.dart';
-import 'revenuecat_purchase_modal.dart'; // Add this import
+import 'revenuecat_purchase_modal.dart';
+import 'package:intl/intl.dart';
 
 // ─── Full Hero ────────────────────────────────────────────────────────────────
 
-class HeroSection extends StatelessWidget {
+class HeroSection extends StatefulWidget {
   const HeroSection({super.key});
+
+  @override
+  State<HeroSection> createState() => _HeroSectionState();
+}
+
+class _HeroSectionState extends State<HeroSection> {
+  int _tapCount = 0;
+  DateTime? _firstTapAt;
+
+  /// 6 taps within 4 seconds triggers reviewer access.
+  static const int _requiredTaps = 6;
+  static const Duration _tapWindow = Duration(seconds: 4);
+
+  void _handleIconTap() async {
+    final now = DateTime.now();
+
+    // Reset if outside the time window
+    if (_firstTapAt != null && now.difference(_firstTapAt!) > _tapWindow) {
+      _tapCount = 0;
+      _firstTapAt = null;
+    }
+
+    if (_tapCount == 0) _firstTapAt = now;
+    _tapCount++;
+
+    debugPrint('🤫 Icon tap $_tapCount/$_requiredTaps');
+
+    if (_tapCount >= _requiredTaps) {
+      _tapCount = 0;
+      _firstTapAt = null;
+      await _activateReviewerAccess();
+    }
+  }
+
+  Future<void> _activateReviewerAccess() async {
+    final provider = context.read<SubscriptionProvider>();
+
+    // Already premium — nothing to do
+    if (provider.isPremium) {
+      debugPrint('ℹ️ Already premium, reviewer tap ignored');
+      return;
+    }
+
+    await provider.grantReviewerAccess();
+
+    if (!mounted) return;
+
+    // Subtle confirmation — no mention of "reviewer" or "backdoor"
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.workspace_premium, color: Colors.white, size: 16),
+            SizedBox(width: 8),
+            Text(
+              'Premium unlocked!',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        backgroundColor: AppTheme.accentGold,
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final subscriptionProvider = context.watch<SubscriptionProvider>();
-    
+
     return Container(
       height: 200,
       decoration: BoxDecoration(
@@ -45,21 +113,25 @@ class HeroSection extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.sports_soccer,
-                        color: Colors.white,
-                        size: 24,
+                    // ── Tappable icon ─────────────────────────────────────────
+                    GestureDetector(
+                      onTap: _handleIconTap,
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Image.asset(
+                          'assets/icons/heroicon.png',
+                          width: 24,
+                          height: 24,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      '90plus Tips',
+                      '90PLUS TIPS',
                       style: Theme.of(context).textTheme.displayLarge!.copyWith(
                             color: Colors.white,
                             fontSize: 20,
@@ -79,7 +151,7 @@ class HeroSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Data-driven predictions from expert analysts',
+                  'Expert Analysis, Reliable Predictions & Insights For Every Game',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.9),
                     fontSize: 16,
@@ -94,12 +166,12 @@ class HeroSection extends StatelessWidget {
     );
   }
 
-  Widget _buildTappableStatusBadge(BuildContext context, SubscriptionProvider provider) {
-    // Determine status
+  Widget _buildTappableStatusBadge(
+      BuildContext context, SubscriptionProvider provider) {
     String statusText;
     Color statusColor;
     IconData statusIcon;
-    
+
     if (provider.isPremium) {
       statusText = 'PREMIUM';
       statusColor = AppTheme.accentGold;
@@ -115,9 +187,7 @@ class HeroSection extends StatelessWidget {
     }
 
     return GestureDetector(
-      onTap: () {
-        _showUpgradeModal(context);
-      },
+      onTap: () => _showUpgradeModal(context),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
@@ -145,11 +215,7 @@ class HeroSection extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              statusIcon,
-              size: 16,
-              color: statusColor,
-            ),
+            Icon(statusIcon, size: 16, color: statusColor),
             const SizedBox(width: 6),
             Text(
               statusText,
@@ -177,22 +243,91 @@ class HeroSection extends StatelessWidget {
 
   String _getFormattedDate() {
     final now = DateTime.now();
-    final month = now.month.toString().padLeft(2, '0');
-    final day = now.day.toString().padLeft(2, '0');
-    final year = now.year;
-    return '$month/$day/$year';
+    final String weekday = DateFormat('EEEE').format(now);
+    final String dayWithSuffix = _getDayWithSuffix(now.day);
+    return '$weekday, $dayWithSuffix';
+  }
+
+  String _getDayWithSuffix(int day) {
+    if (day >= 11 && day <= 13) return '${day}th';
+    switch (day % 10) {
+      case 1: return '${day}st';
+      case 2: return '${day}nd';
+      case 3: return '${day}rd';
+      default: return '${day}th';
+    }
   }
 }
 
 // ─── Sticky Compact Header ────────────────────────────────────────────────────
 
-class StickyHeroHeader extends StatelessWidget {
+class StickyHeroHeader extends StatefulWidget {
   const StickyHeroHeader({super.key});
+
+  @override
+  State<StickyHeroHeader> createState() => _StickyHeroHeaderState();
+}
+
+class _StickyHeroHeaderState extends State<StickyHeroHeader> {
+  int _tapCount = 0;
+  DateTime? _firstTapAt;
+
+  static const int _requiredTaps = 6;
+  static const Duration _tapWindow = Duration(seconds: 4);
+
+  void _handleIconTap() async {
+    final now = DateTime.now();
+
+    if (_firstTapAt != null && now.difference(_firstTapAt!) > _tapWindow) {
+      _tapCount = 0;
+      _firstTapAt = null;
+    }
+
+    if (_tapCount == 0) _firstTapAt = now;
+    _tapCount++;
+
+    debugPrint('🤫 Compact icon tap $_tapCount/$_requiredTaps');
+
+    if (_tapCount >= _requiredTaps) {
+      _tapCount = 0;
+      _firstTapAt = null;
+      await _activateReviewerAccess();
+    }
+  }
+
+  Future<void> _activateReviewerAccess() async {
+    final provider = context.read<SubscriptionProvider>();
+
+    if (provider.isPremium) return;
+
+    await provider.grantReviewerAccess();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.workspace_premium, color: Colors.white, size: 16),
+            SizedBox(width: 8),
+            Text(
+              'Premium unlocked!',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        backgroundColor: AppTheme.accentGold,
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final subscriptionProvider = context.watch<SubscriptionProvider>();
-    
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -227,22 +362,26 @@ class StickyHeroHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.sports_soccer,
-                    color: Colors.white,
-                    size: 20,
+                // ── Tappable icon ───────────────────────────────────────────
+                GestureDetector(
+                  onTap: _handleIconTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Image.asset(
+                      'assets/icons/heroicon.png',
+                      width: 20,
+                      height: 20,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
-                    '90plus Tips',
+                    '90PLUS TIPS',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -262,12 +401,12 @@ class StickyHeroHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildTappableCompactStatusBadge(BuildContext context, SubscriptionProvider provider) {
-    // Determine status
+  Widget _buildTappableCompactStatusBadge(
+      BuildContext context, SubscriptionProvider provider) {
     String statusText;
     Color statusColor;
     IconData statusIcon;
-    
+
     if (provider.isPremium) {
       statusText = 'PREMIUM';
       statusColor = AppTheme.accentGold;
@@ -283,9 +422,7 @@ class StickyHeroHeader extends StatelessWidget {
     }
 
     return GestureDetector(
-      onTap: () {
-        _showUpgradeModal(context);
-      },
+      onTap: () => _showUpgradeModal(context),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
@@ -299,11 +436,7 @@ class StickyHeroHeader extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              statusIcon,
-              size: 12,
-              color: statusColor,
-            ),
+            Icon(statusIcon, size: 12, color: statusColor),
             const SizedBox(width: 4),
             Text(
               statusText,

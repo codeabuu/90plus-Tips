@@ -216,9 +216,9 @@ class _Over25GoalsScreenState extends State<Over25GoalsScreen> {
           // Title
           Expanded(
             child: Text(
-              'SCOREWISE',
+              '90PLUS TIPS',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.blue[900],
                 letterSpacing: 1.5,

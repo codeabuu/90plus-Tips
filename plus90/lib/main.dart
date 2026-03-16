@@ -24,7 +24,6 @@ void main() async {
   
   // Load environment variables
   await dotenv.load(fileName: "assets/.env");
-  print("ENV TEST: ${dotenv.env['BACKEND_URL']}");
   
   runApp(const MyApp());
 }

@@ -90,7 +90,7 @@ class _MethodologyScreenState extends State<MethodologyScreen> {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'At ScoreWise, we don\'t rely on guesswork. Our predictions are generated through a sophisticated multi-layered analytical framework combining statistical models with cutting-edge machine learning.',
+                      'At 90plus Tips, we don\'t rely on guesswork. Our predictions are generated through a sophisticated multi-layered analytical framework combining statistical models with cutting-edge machine learning.',
                       style: TextStyle(
                         color: Colors.white70,
                         fontSize: 14,

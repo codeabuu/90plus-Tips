@@ -1,147 +1,162 @@
 import 'package:flutter/material.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../services/revenuecat_service.dart';
+import '../services/reviewer_access_service.dart';
 import '../config/revenuecat_config.dart';
 
 class SubscriptionProvider with ChangeNotifier {
   final RevenueCatService _revenueCat = RevenueCatService();
-  
+
   bool _isLoading = false;
   bool _isInitialized = false;
   DateTime? _expiresAt;
   bool _isPremium = false;
+  bool _isReviewerAccess = false; // ← tracks reviewer-granted premium
   Map<String, dynamic>? _subscriptionInfo;
   List<Package> _packages = [];
-  
-  // Getters
+
   DateTime? get expiresAt => _expiresAt;
   bool get isLoading => _isLoading;
   bool get isInitialized => _isInitialized;
-  bool get isPremium => _isPremium;
+
+  /// True if the user has a real subscription OR active reviewer access.
+  bool get isPremium => _isPremium || _isReviewerAccess;
+
+  /// True specifically if access came from the reviewer backdoor (not a real sub).
+  bool get isReviewerAccess => _isReviewerAccess;
+
   Map<String, dynamic>? get subscriptionInfo => _subscriptionInfo;
   List<Package> get packages => _packages;
-  
-  // ✅ Get app_user_id for reference
+
   Future<String> getAppUserId() async {
     return await _revenueCat.getAppUserId();
   }
-  
-// In SubscriptionProvider
 
-Future<void> initialize() async {
-  if (_isInitialized) return;
-  
-  _isLoading = true;
-  notifyListeners();
-  
-  try {
-    debugPrint('🔄 Initializing RevenueCat service...');
-    await _revenueCat.initialize();
-    debugPrint('✅ RevenueCat service initialized');
-    
-    // Listen to premium status changes
-    _revenueCat.premiumStatusStream.listen((premium) {
-      _isPremium = premium;
-      _subscriptionInfo = _revenueCat.getSubscriptionInfo();
-      notifyListeners();
-    });
-    
-    // Listen to packages updates
-    _revenueCat.packagesStream.listen((packages) {
-      _packages = packages;
-      notifyListeners();
-    });
-    
-    // Set initial state
-    _isPremium = _revenueCat.isPremium;
-    _subscriptionInfo = _revenueCat.getSubscriptionInfo();
-    _packages = _revenueCat.availablePackages;
-    
-    _isInitialized = true;
-    debugPrint('✅ SubscriptionProvider initialized. Premium: $_isPremium');
-    debugPrint('📦 Packages loaded: ${_packages.length}');
-  } catch (e) {
-    debugPrint('❌ Error initializing SubscriptionProvider: $e');
-    _isInitialized = false;
-  } finally {
-    _isLoading = false;
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+
+    _isLoading = true;
     notifyListeners();
-  }
-}
-  
-  // Add to SubscriptionProvider
 
-Future<void> debugSubscriptionState() async {
-  debugPrint('🔍 ===== SUBSCRIPTION DEBUG =====');
-  debugPrint('isInitialized: $_isInitialized');
-  debugPrint('isLoading: $_isLoading');
-  debugPrint('isPremium: $_isPremium');
-  debugPrint('packages count: ${_packages.length}');
-  
-  if (_subscriptionInfo != null) {
-    debugPrint('subscriptionInfo: $_subscriptionInfo');
+    try {
+      debugPrint('🔄 Initializing RevenueCat service...');
+      await _revenueCat.initialize();
+      debugPrint('✅ RevenueCat service initialized');
+
+      _revenueCat.premiumStatusStream.listen((premium) {
+        _isPremium = premium;
+        _subscriptionInfo = _revenueCat.getSubscriptionInfo();
+        notifyListeners();
+      });
+
+      _revenueCat.packagesStream.listen((packages) {
+        _packages = packages;
+        notifyListeners();
+      });
+
+      _isPremium = _revenueCat.isPremium;
+      _subscriptionInfo = _revenueCat.getSubscriptionInfo();
+      _packages = _revenueCat.availablePackages;
+
+      // ── Check reviewer access ──────────────────────────────────────────────
+      _isReviewerAccess = await ReviewerAccessService.hasActiveAccess();
+      debugPrint('🔓 Reviewer access on init: $_isReviewerAccess');
+
+      _isInitialized = true;
+      debugPrint('✅ SubscriptionProvider initialized. Premium: $isPremium');
+      debugPrint('📦 Packages loaded: ${_packages.length}');
+      debugPrint('🎯 Active plan on init: $activePlanName');
+    } catch (e) {
+      debugPrint('❌ Error initializing SubscriptionProvider: $e');
+      _isInitialized = false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
-  
-  // Print all packages
-  for (var package in _packages) {
-    debugPrint('📦 Package: ${package.identifier}');
-    debugPrint('  - Price: ${package.storeProduct.priceString}');
-    debugPrint('  - Title: ${package.storeProduct.title}');
+
+  /// Called from the hero icon tap sequence. Grants reviewer premium and
+  /// notifies listeners so the UI updates immediately.
+  Future<void> grantReviewerAccess() async {
+    await ReviewerAccessService.grantAccess();
+    _isReviewerAccess = true;
+    notifyListeners();
+    debugPrint('🔓 Reviewer access granted via tap sequence');
   }
-  
-  debugPrint('🔍 ===== END DEBUG =====');
-}
-  // ✅ UPDATED: Return type changed to CustomPurchaseResult
+
+  Future<void> debugSubscriptionState() async {
+    debugPrint('🔍 ===== SUBSCRIPTION DEBUG =====');
+    debugPrint('isInitialized: $_isInitialized');
+    debugPrint('isLoading: $_isLoading');
+    debugPrint('isPremium (real): $_isPremium');
+    debugPrint('isReviewerAccess: $_isReviewerAccess');
+    debugPrint('isPremium (combined): $isPremium');
+    debugPrint('packages count: ${_packages.length}');
+
+    if (_subscriptionInfo != null) {
+      debugPrint('📋 subscriptionInfo keys: ${_subscriptionInfo!.keys.toList()}');
+      _subscriptionInfo!.forEach((k, v) => debugPrint('  $k: $v'));
+    }
+
+    final productId = _revenueCat.getActiveProductId();
+    debugPrint('🎯 getActiveProductId() → $productId');
+    debugPrint('🏷️  activePlanName → $activePlanName');
+
+    for (var package in _packages) {
+      debugPrint('📦 Package: ${package.identifier}');
+      debugPrint('  - Price: ${package.storeProduct.priceString}');
+      debugPrint('  - Title: ${package.storeProduct.title}');
+    }
+
+    debugPrint('🔍 ===== END DEBUG =====');
+  }
+
   Future<CustomPurchaseResult> purchasePackage(Package package) async {
     _isLoading = true;
     notifyListeners();
-    
+
     try {
       final result = await _revenueCat.purchasePackage(package);
-      
+
       if (result.success) {
         _isPremium = _revenueCat.isPremium;
         _subscriptionInfo = _revenueCat.getSubscriptionInfo();
-        
-        // ✅ Webhook handles Django sync automatically
-        debugPrint('📡 Purchase successful - webhook will update Django');
+        debugPrint('📡 Purchase successful');
+        debugPrint('🎯 Post-purchase activePlanName: $activePlanName');
       }
-      
+
       return result;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
-  
-  // ✅ UPDATED: Return type changed to CustomRestoreResult
+
   Future<RestoreResult> restorePurchases() async {
     _isLoading = true;
     notifyListeners();
-    
+
     try {
       final result = await _revenueCat.restorePurchases();
-      
+
       if (result.success) {
         _isPremium = _revenueCat.isPremium;
         _subscriptionInfo = _revenueCat.getSubscriptionInfo();
-        
-        // ✅ Webhook handles restore sync automatically
-        debugPrint('📡 Restore successful - webhook will update Django');
+        debugPrint('📡 Restore successful');
+        debugPrint('🎯 Post-restore activePlanName: $activePlanName');
       }
-      
+
       return result;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
-  
-  // Refresh packages
+
   Future<void> refreshPackages() async {
     _isLoading = true;
     notifyListeners();
-    
+
     try {
       await _revenueCat.fetchPackages();
       _packages = _revenueCat.availablePackages;
@@ -152,66 +167,104 @@ Future<void> debugSubscriptionState() async {
       notifyListeners();
     }
   }
-  
-  // Get package by identifier
+
   Package? getPackageById(String identifier) {
     return _revenueCat.getPackageById(identifier);
   }
-  
-  // Get formatted price
+
   String getFormattedPrice(Package package) {
     return package.storeProduct.priceString;
   }
-  
-  // Get subscription period
+
+  /// Returns the active plan name.
+  /// For reviewer access, returns 'Yearly' so all upgrade buttons stay correct.
+  String? get activePlanName {
+    // Reviewer access: treat as yearly so no UPGRADE prompts appear
+    if (_isReviewerAccess && !_isPremium) return 'Yearly';
+
+    if (!_isPremium) return null;
+
+    final productId = _revenueCat.getActiveProductId()
+        ?? _subscriptionInfo?['productIdentifier'] as String?;
+
+    if (productId == null) {
+      debugPrint('⚠️ activePlanName: productId is null');
+      return 'Premium';
+    }
+
+    debugPrint('🎯 activePlanName resolving from productId: $productId');
+
+    for (final entry in RevenueCatConfig.productIds.entries) {
+      if (productId == entry.value) return _labelForKey(entry.key);
+    }
+
+    final id = productId.toLowerCase();
+    if (id.contains('week'))                                  return 'Weekly';
+    if (id.contains('3month') || id.contains('three-month')) return '3 Months';
+    if (id.contains('month'))                                 return 'Monthly';
+    if (id.contains('year') || id.contains('annual'))        return 'Yearly';
+
+    debugPrint('⚠️ activePlanName: no match found for "$productId"');
+    return 'Premium';
+  }
+
+  String _labelForKey(String key) {
+    switch (key) {
+      case 'weekly':   return 'Weekly';
+      case 'monthly':  return 'Monthly';
+      case '3_months': return '3 Months';
+      case 'yearly':   return 'Yearly';
+      default:         return 'Premium';
+    }
+  }
+
+  String getExpirationDateString() {
+    // Show reviewer expiry if that's the active access mode
+    if (_isReviewerAccess && !_isPremium) {
+      return 'Reviewer access: expires in ~1 year';
+    }
+    if (_subscriptionInfo == null || _subscriptionInfo!['expiration'] == null) {
+      return '';
+    }
+    try {
+      final date = DateTime.parse(_subscriptionInfo!['expiration'].toString());
+      return 'Renews: ${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return '';
+    }
+  }
+
   String getSubscriptionPeriod(Package package) {
-  final identifier = package.identifier.toLowerCase();
-  
-  if (identifier.contains('week')) return 'per week';
-  if (identifier.contains('month')) return 'per month';
-  if (identifier.contains('3month') || identifier.contains('three_month')) return 'per 3 months';
-  if (identifier.contains('year') || identifier.contains('annual')) return 'per year';
-  if (identifier.contains('lifetime')) return 'one-time';
-  
-  return '';
-}
-  
-  // Calculate savings for yearly vs monthly
+    final id = package.identifier.toLowerCase();
+    if (id.contains('week'))                                        return 'per week';
+    if (id.contains('3month') || id.contains('three_month'))       return 'per 3 months';
+    if (id.contains('month'))                                       return 'per month';
+    if (id.contains('year') || id.contains('annual'))              return 'per year';
+    if (id.contains('lifetime'))                                    return 'one-time';
+    return '';
+  }
+
   String? calculateSavings(Package monthly, Package yearly) {
     try {
       final monthlyPrice = monthly.storeProduct.price;
       final yearlyPrice = yearly.storeProduct.price;
-      
+
       if (monthlyPrice > 0 && yearlyPrice > 0) {
         final monthlyCostForYear = monthlyPrice * 12;
         final savings = monthlyCostForYear - yearlyPrice;
         final percentage = ((savings / monthlyCostForYear) * 100).round();
-        
-        if (savings > 0 && percentage > 0) {
-          return 'Save $percentage%';
-        }
+        if (savings > 0 && percentage > 0) return 'Save 50%';
       }
     } catch (e) {
       debugPrint('Error calculating savings: $e');
     }
     return null;
   }
-  
-  // Check if user has trial
-  bool hasActiveTrial() {
-    return _revenueCat.hasActiveTrial();
-  }
-  
-  // Check if subscription is cancelled
-  bool isSubscriptionCancelled() {
-    return _revenueCat.isSubscriptionCancelled();
-  }
-  
-  // Get days until expiration
-  int? getDaysUntilExpiration() {
-    return _revenueCat.getDaysUntilExpiration();
-  }
-  
+
+  bool hasActiveTrial() => _revenueCat.hasActiveTrial();
+  bool isSubscriptionCancelled() => _revenueCat.isSubscriptionCancelled();
+  int? getDaysUntilExpiration() => _revenueCat.getDaysUntilExpiration();
+
   @override
   void dispose() {
     _revenueCat.dispose();

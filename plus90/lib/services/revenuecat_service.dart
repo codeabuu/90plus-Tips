@@ -14,22 +14,18 @@ class RevenueCatService {
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
-  // Stream controllers
   final _customerInfoController = StreamController<CustomerInfo>.broadcast();
   final _premiumStatusController = StreamController<bool>.broadcast();
   final _packagesController = StreamController<List<Package>>.broadcast();
 
-  // Stream getters
   Stream<CustomerInfo> get customerInfoStream => _customerInfoController.stream;
   Stream<bool> get premiumStatusStream => _premiumStatusController.stream;
   Stream<List<Package>> get packagesStream => _packagesController.stream;
 
-  // Current state
   CustomerInfo? _currentCustomerInfo;
   bool _isPremium = false;
   List<Package> _availablePackages = [];
 
-  // Getters
   CustomerInfo? get currentCustomerInfo => _currentCustomerInfo;
   bool get isPremium => _isPremium;
   List<Package> get availablePackages => _availablePackages;
@@ -38,7 +34,6 @@ class RevenueCatService {
     if (_currentCustomerInfo != null) {
       return _currentCustomerInfo!.originalAppUserId;
     }
-    
     final customerInfo = await Purchases.getCustomerInfo();
     return customerInfo.originalAppUserId;
   }
@@ -49,15 +44,17 @@ class RevenueCatService {
     try {
       await dotenv.load(fileName: 'assets/.env');
       final apiKey = dotenv.get('REVENUECAT_API_KEY');
-      
+
       await Purchases.setup(apiKey);
       Purchases.setLogLevel(LogLevel.debug);
 
-      // Get initial customer info
       try {
-        await Purchases.getCustomerInfo();
+        _currentCustomerInfo = await Purchases.getCustomerInfo();
+        if (_currentCustomerInfo != null) {
+          _updatePremiumStatus(_currentCustomerInfo!);
+        }
       } catch (e) {
-        // Ignore - will retry later
+        debugPrint('⚠️ Could not fetch initial customer info: $e');
       }
 
       Purchases.addCustomerInfoUpdateListener(_onCustomerInfoUpdated);
@@ -75,7 +72,6 @@ class RevenueCatService {
       _currentCustomerInfo = await Purchases.getCustomerInfo();
       _updatePremiumStatus(_currentCustomerInfo!);
       _customerInfoController.add(_currentCustomerInfo!);
-      
       return _currentCustomerInfo!;
     } catch (e) {
       rethrow;
@@ -85,15 +81,14 @@ class RevenueCatService {
   Future<List<Package>> fetchPackages() async {
     try {
       final offerings = await Purchases.getOfferings();
-      
-      final offering = offerings.getOffering(RevenueCatConfig.offeringsId) ?? 
-                      offerings.current;
-      
+      final offering = offerings.getOffering(RevenueCatConfig.offeringsId) ??
+          offerings.current;
+
       if (offering != null) {
         _availablePackages = offering.availablePackages;
         _packagesController.add(_availablePackages);
       }
-      
+
       return _availablePackages;
     } catch (e) {
       return [];
@@ -105,7 +100,7 @@ class RevenueCatService {
       final purchaserInfo = await Purchases.purchasePackage(package);
       _currentCustomerInfo = purchaserInfo.customerInfo;
       _updatePremiumStatus(_currentCustomerInfo!);
-      
+
       return CustomPurchaseResult(
         success: true,
         customerInfo: _currentCustomerInfo,
@@ -119,7 +114,6 @@ class RevenueCatService {
           isCancelled: true,
         );
       }
-
       return CustomPurchaseResult(
         success: false,
         error: e.message ?? 'Unknown error',
@@ -134,9 +128,7 @@ class RevenueCatService {
 
   Future<RestoreResult> restorePurchases() async {
     try {
-      if (!_isInitialized) {
-        await initialize();
-      }
+      if (!_isInitialized) await initialize();
 
       final customerInfo = await Purchases.restorePurchases();
       _currentCustomerInfo = customerInfo;
@@ -155,9 +147,10 @@ class RevenueCatService {
   }
 
   void _updatePremiumStatus(CustomerInfo customerInfo) {
-    final entitlement = customerInfo.entitlements.all[RevenueCatConfig.premiumEntitlementId];
+    final entitlement =
+        customerInfo.entitlements.all[RevenueCatConfig.premiumEntitlementId];
     final newStatus = entitlement?.isActive ?? false;
-    
+
     if (newStatus != _isPremium) {
       _isPremium = newStatus;
       _premiumStatusController.add(_isPremium);
@@ -170,21 +163,34 @@ class RevenueCatService {
     _customerInfoController.add(customerInfo);
   }
 
+  // ✅ FIXED: uses entitlement.productIdentifier (the store product ID)
+  // NOT entitlement.identifier (which is the entitlement name "90plus Pro")
   Map<String, dynamic>? getSubscriptionInfo() {
     if (_currentCustomerInfo == null) return null;
-    
-    final entitlement = _currentCustomerInfo!.entitlements.all[RevenueCatConfig.premiumEntitlementId];
+
+    final entitlement = _currentCustomerInfo!
+        .entitlements.all[RevenueCatConfig.premiumEntitlementId];
     if (entitlement == null || !entitlement.isActive) return null;
-    
+
     return {
       'isActive': entitlement.isActive,
-      'productIdentifier': entitlement.identifier,
+      'productIdentifier': entitlement.productIdentifier, // e.g. "monthly:monthly-base"
+      'entitlementId': entitlement.identifier,            // e.g. "90plus Pro"
       'latestPurchase': entitlement.latestPurchaseDate,
       'expiration': entitlement.expirationDate,
       'willRenew': entitlement.willRenew,
       'store': entitlement.store,
       'periodType': entitlement.periodType.name,
     };
+  }
+
+  // ✅ NEW: direct access to the active store product ID
+  String? getActiveProductId() {
+    final entitlement = _currentCustomerInfo
+        ?.entitlements
+        .active[RevenueCatConfig.premiumEntitlementId];
+    debugPrint('🎯 getActiveProductId: ${entitlement?.productIdentifier}');
+    return entitlement?.productIdentifier;
   }
 
   Package? getPackageById(String identifier) {
@@ -199,8 +205,8 @@ class RevenueCatService {
 
   List<Package> getSubscriptionPackages() {
     return _availablePackages.where((package) {
-      return package.identifier.contains('monthly') || 
-             package.identifier.contains('yearly');
+      return package.identifier.contains('monthly') ||
+          package.identifier.contains('yearly');
     }).toList();
   }
 
@@ -216,15 +222,14 @@ class RevenueCatService {
 
   bool hasActiveTrial() {
     if (_currentCustomerInfo == null) return false;
-    
-    final entitlement = _currentCustomerInfo!.entitlements.all[RevenueCatConfig.premiumEntitlementId];
+    final entitlement = _currentCustomerInfo!
+        .entitlements.all[RevenueCatConfig.premiumEntitlementId];
     return entitlement?.periodType == PeriodType.intro;
   }
 
   bool isSubscriptionCancelled() {
     final info = getSubscriptionInfo();
     if (info == null) return false;
-    
     final willRenew = info['willRenew'] as bool?;
     return willRenew == false;
   }
@@ -232,9 +237,9 @@ class RevenueCatService {
   int? getDaysUntilExpiration() {
     final info = getSubscriptionInfo();
     if (info == null || info['expiration'] == null) return null;
-    
+
     try {
-      final expiration = DateTime.parse(info['expiration']!);
+      final expiration = DateTime.parse(info['expiration'].toString());
       final now = DateTime.now();
       return expiration.difference(now).inDays;
     } catch (e) {
@@ -250,7 +255,6 @@ class RevenueCatService {
   }
 }
 
-// Purchase Result
 class CustomPurchaseResult {
   final bool success;
   final CustomerInfo? customerInfo;
@@ -267,7 +271,6 @@ class CustomPurchaseResult {
   });
 }
 
-// Restore Result
 class RestoreResult {
   final bool success;
   final CustomerInfo? customerInfo;

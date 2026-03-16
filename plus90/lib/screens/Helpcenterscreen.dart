@@ -28,7 +28,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
     ),
     FaqItem(
       question: 'What is Tip of the Day?',
-      answer: 'Tip of the Day is our most confident prediction with a 99.99% accuracy rating. It\'s a single, carefully analyzed pick that our experts believe has the highest probability of success. This is a premium feature that gives you our best bet of the day.',
+      answer: 'Tip of the Day is our most confident prediction with a 99.99% accuracy rating. It\'s a single, carefully analyzed pick that our experts believe has the highest probability of success. This is a premium feature that gives you our best tip of the day.',
       icon: Icons.star,
       color: AppTheme.accentGold,
     ),

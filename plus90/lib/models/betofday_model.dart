@@ -28,7 +28,7 @@ class BetOfDayAccumulator extends BaseAccumulator {
           .map((match) => BetOfDayMatch.fromJson(match))
           .toList(),
       totalOddsRaw: double.parse(json['total_odds_raw']?.toString() ?? '0'),
-      type: 'Bet of the Day', // Hardcode this since API doesn't provide it
+      type: 'Tip of the Day', // Hardcode this since API doesn't provide it
       scrapedAt: DateTime.now(), // Since API doesn't have scraped_at, use current time
       count: json['count'] ?? 0,
       cached: json['cached'] ?? false,

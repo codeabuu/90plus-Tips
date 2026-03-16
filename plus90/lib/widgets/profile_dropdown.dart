@@ -244,15 +244,15 @@ class _ProfileDropdownState extends State<ProfileDropdown> with SingleTickerProv
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    subscriptionProvider.isPremium
-                                        ? 'Premium Member'
-                                        : 'Free Member',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.primaryNavy,
-                                    ),
-                                  ),
+  subscriptionProvider.isPremium
+      ? 'Premium Member${subscriptionProvider.activePlanName != null ? ' · ${subscriptionProvider.activePlanName}' : ''}'
+      : 'Free Member',
+  style: TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    color: AppTheme.primaryNavy,
+  ),
+),
                                   const SizedBox(height: 2),
                                   Text(
                                     subscriptionProvider.isPremium

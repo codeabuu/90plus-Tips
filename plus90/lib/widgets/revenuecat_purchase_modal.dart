@@ -9,38 +9,102 @@ import '../screens/privacypolicy.dart';
 class RevenueCatPurchaseModal extends StatelessWidget {
   const RevenueCatPurchaseModal({super.key});
 
-  Future<void> _debugSubscriptionState(BuildContext context, SubscriptionProvider provider) async {
-    print('🔍 ===== SUBSCRIPTION DEBUG =====');
-    print('isInitialized: ${provider.isInitialized}');
-    print('isLoading: ${provider.isLoading}');
-    print('isPremium: ${provider.isPremium}');
-    print('packages count: ${provider.packages.length}');
-    if (provider.subscriptionInfo != null) print('subscriptionInfo: ${provider.subscriptionInfo}');
-    for (var package in provider.packages) {
-      print('📦 Package: ${package.identifier}');
-      print('  - Price: ${package.storeProduct.priceString}');
-      print('  - Title: ${package.storeProduct.title}');
-      print('  - Description: ${package.storeProduct.description}');
-    }
-    try {
-      final offerings = await Purchases.getOfferings();
-      print('📦 All offerings: ${offerings.all.keys}');
-      print('📦 Current offering: ${offerings.current?.identifier}');
-      if (offerings.current != null) {
-        print('📦 Packages in current offering: ${offerings.current!.availablePackages.length}');
-      }
-    } catch (e) {
-      print('❌ Error fetching offerings: $e');
-    }
-    print('🔍 ===== END DEBUG =====');
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Debug info printed. Packages found: ${provider.packages.length}'),
-        backgroundColor: Colors.blue,
-        duration: const Duration(seconds: 3),
-      ));
+  // ---------------------------------------------------------------------------
+  // Plan hierarchy: weekly=1, monthly=2, 3months=3, yearly=4
+  // ---------------------------------------------------------------------------
+  static const Map<String, int> _planOrder = {
+    'weekly':   1,
+    'monthly':  2,
+    '3_months': 3,
+    'yearly':   4,
+  };
+
+  /// Returns the hierarchy key for a package identifier string.
+  String? _planKey(String packageId) {
+    final id = packageId.toLowerCase();
+    if (id.contains('week'))                                  return 'weekly';
+    if (id.contains('3month') || id.contains('three_month')) return '3_months';
+    if (id.contains('month'))                                 return 'monthly';
+    if (id.contains('year') || id.contains('annual'))        return 'yearly';
+    return null;
+  }
+
+  /// Returns the hierarchy key for the active plan name string coming from
+  /// [SubscriptionProvider.activePlanName] (e.g. "Weekly", "Monthly", …).
+  String? _activePlanKey(String? activePlanName) {
+    if (activePlanName == null) return null;
+    switch (activePlanName) {
+      case 'Weekly':   return 'weekly';
+      case 'Monthly':  return 'monthly';
+      case '3 Months': return '3_months';
+      case 'Yearly':   return 'yearly';
+      default:         return null;
     }
   }
+
+  /// Core button-state logic.
+  ///
+  /// Returns a map with:
+  ///   - `label`    → String shown on the button
+  ///   - `disabled` → bool
+  ///   - `color`    → Color for the button background
+  Map<String, dynamic> _getButtonState({
+    required String packageId,
+    required String? activePlanName,
+    required bool isPremium,
+    required String? trialText, // if a free-trial is available, honour it
+  }) {
+    // Not a subscriber yet → normal "Select" / "Try Free" flow
+    if (!isPremium || activePlanName == null) {
+      return {
+        'label': trialText != null ? 'Try Free' : 'SELECT PLAN',
+        'disabled': false,
+        'color': trialText != null ? Colors.blue : AppTheme.accentGreen,
+      };
+    }
+
+    final activeKey  = _activePlanKey(activePlanName);
+    final thisKey    = _planKey(packageId);
+
+    final activeOrder = _planOrder[activeKey] ?? 0;
+    final thisOrder   = _planOrder[thisKey]   ?? 0;
+
+    // ── CURRENT PLAN ──────────────────────────────────────────────────────────
+    if (activeKey != null && thisKey == activeKey) {
+      return {
+        'label': 'CURRENT',
+        'disabled': true,
+        'color': Colors.grey.shade500,
+      };
+    }
+
+    // ── UPGRADE (this plan is higher than current) ────────────────────────────
+    if (thisOrder > activeOrder) {
+      return {
+        'label': 'UPGRADE',
+        'disabled': false,
+        'color': AppTheme.accentGreen,
+      };
+    }
+
+    // ── COVERED (this plan is lower than current) ─────────────────────────────
+    if (thisOrder < activeOrder && thisOrder > 0) {
+      return {
+        'label': 'COVERED',
+        'disabled': true,
+        'color': Colors.grey.shade400,
+      };
+    }
+
+    // Fallback
+    return {
+      'label': 'SELECT PLAN',
+      'disabled': false,
+      'color': AppTheme.accentGreen,
+    };
+  }
+
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +137,7 @@ class RevenueCatPurchaseModal extends StatelessWidget {
 
             const SizedBox(height: 4),
 
-            // ✅ Icon + Title inline
+            // Icon + Title inline
             Row(
               children: [
                 Container(
@@ -132,7 +196,7 @@ class RevenueCatPurchaseModal extends StatelessWidget {
 
             const Divider(height: 20),
 
-            // ✅ Features in 2-column grid
+            // Features in 2-column grid
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
@@ -163,61 +227,55 @@ class RevenueCatPurchaseModal extends StatelessWidget {
               },
             ),
 
-            
             Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          TextButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const TermsScreen()),
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TermsScreen()),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Terms & Conditions',
+                    style: TextStyle(fontSize: 10, color: Colors.blue),
+                  ),
+                ),
+                const Text('|', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                TextButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Privacy Policy',
+                    style: TextStyle(fontSize: 10, color: Colors.blue),
+                  ),
+                ),
+              ],
             ),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: const Text(
-              'Terms & Conditions',
-              style: TextStyle(fontSize: 10, color: Colors.blue),
-            ),
-          ),
-          const Text('|', style: TextStyle(fontSize: 10, color: Colors.grey)),
-          TextButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const PrivacyScreen()),
-            ),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: const Text(
-              'Privacy Policy',
-              style: TextStyle(fontSize: 10, color: Colors.blue),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
-                ],
-              ),
-            ),
-          );
-        }
+    );
+  }
 
   Widget _buildLoadingState(BuildContext context, SubscriptionProvider provider) {
-    return Column(
+    return const Column(
       children: [
-        const CircularProgressIndicator(
+        CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentGreen),
         ),
-        const SizedBox(height: 12),
-       
-        TextButton(
-          onPressed: () => _debugSubscriptionState(context, provider),
-          child: const Text('Debug'),
-        ),
+        SizedBox(height: 12),
       ],
     );
   }
@@ -253,11 +311,6 @@ class RevenueCatPurchaseModal extends StatelessWidget {
               ),
               child: const Text('Retry'),
             ),
-            const SizedBox(width: 12),
-            TextButton(
-              onPressed: () => _debugSubscriptionState(context, provider),
-              child: const Text('Debug'),
-            ),
           ],
         ),
       ],
@@ -271,10 +324,10 @@ class RevenueCatPurchaseModal extends StatelessWidget {
       final id = pkg.identifier.toLowerCase();
       if (id.contains('week')) {
         weeklyPackage = pkg;
-      } else if (id.contains('month') && !id.contains('3month') && !id.contains('three')) {
-        monthlyPackage = pkg;
       } else if (id.contains('3month') || id.contains('three_month')) {
         threeMonthPackage = pkg;
+      } else if (id.contains('month')) {
+        monthlyPackage = pkg;
       } else if (id.contains('year') || id.contains('annual')) {
         yearlyPackage = pkg;
       }
@@ -285,13 +338,12 @@ class RevenueCatPurchaseModal extends StatelessWidget {
       savings = provider.calculateSavings(monthlyPackage, yearlyPackage);
     }
 
-    // ✅ No fixed height container — parent SingleChildScrollView handles it
     return Column(
       children: [
         if (weeklyPackage != null) ...[
           _buildPlanCard(
             context: context, provider: provider, package: weeklyPackage,
-            title: 'Weekly', subtitle: 'Try before you commit',
+            title: 'Weekly', subtitle: 'Cheap & flexible',
           ),
           const SizedBox(height: 8),
         ],
@@ -320,7 +372,6 @@ class RevenueCatPurchaseModal extends StatelessWidget {
     );
   }
 
-  // ✅ Compact single-row card: [title+subtitle] LEFT | [price+period] + [button] RIGHT
   Widget _buildPlanCard({
     required BuildContext context,
     required SubscriptionProvider provider,
@@ -331,6 +382,7 @@ class RevenueCatPurchaseModal extends StatelessWidget {
     Color? badgeColor,
     bool badgeOnRight = false,
   }) {
+    // ── Resolve free-trial text (same logic as before) ───────────────────────
     String? trialText;
     Color? trialColor;
 
@@ -352,100 +404,152 @@ class RevenueCatPurchaseModal extends StatelessWidget {
         }
       }
     } catch (e) {
-      print('❌ Error parsing trial info: $e');
+      debugPrint('❌ Error parsing trial info: $e');
     }
 
-    // Trial text overrides badge if present
+    // ── Resolve button state ─────────────────────────────────────────────────
+    final btnState = _getButtonState(
+      packageId: package.identifier,
+      activePlanName: provider.activePlanName,
+      isPremium: provider.isPremium,
+      trialText: trialText,
+    );
+
+    final String  btnLabel    = btnState['label']    as String;
+    final bool    btnDisabled = btnState['disabled'] as bool;
+    final Color   btnColor    = btnState['color']    as Color;
+
+    // ── Badge resolution (trial text overrides badge) ────────────────────────
     final effectiveBadge = trialText ?? badge;
     final effectiveColor = trialText != null ? trialColor! : (badgeColor ?? AppTheme.accentGreen);
-    final showBadge = effectiveBadge != null;
-    // Trial badge always shows on left; savings badge on right
+    final showBadge      = effectiveBadge != null;
     final isBadgeOnRight = trialText == null && badgeOnRight;
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        GestureDetector(
-          onTap: () => _purchasePackage(context, provider, package),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            decoration: BoxDecoration(
-              color: AppTheme.cardBackground,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: showBadge ? effectiveColor.withOpacity(0.5) : AppTheme.neutralGray,
-                width: showBadge ? 1.5 : 1.5,
+    // ── Visual dimming for disabled (covered / current) cards ────────────────
+    final double cardOpacity = btnDisabled ? 0.55 : 1.0;
+
+    return Opacity(
+      opacity: cardOpacity,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          GestureDetector(
+            // Only trigger purchase if the button is enabled
+            onTap: btnDisabled ? null : () => _purchasePackage(context, provider, package),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppTheme.cardBackground,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: showBadge ? effectiveColor.withOpacity(0.5) : AppTheme.neutralGray,
+                  width: 1.5,
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                // Left: title + subtitle
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
+                children: [
+                  // Left: title + subtitle
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primaryNavy)),
+                        Text(subtitle,
+                            style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      ],
+                    ),
+                  ),
+
+                  // Right: was-price + current price + period
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(title,
-                          style: const TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w600,
-                              color: AppTheme.primaryNavy)),
-                      Text(subtitle,
-                          style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text(
+                        _getOriginalPriceString(package, title),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          decoration: TextDecoration.lineThrough,
+                          decorationColor: Colors.red,
+                          decorationThickness: 2,
+                        ),
+                      ),
+                      Text(
+                        provider.getFormattedPrice(package),
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.primaryNavy),
+                      ),
+                      Text(
+                        provider.getSubscriptionPeriod(package),
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
                     ],
                   ),
-                ),
-                // Right: price + period
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(provider.getFormattedPrice(package),
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w700,
-                            color: AppTheme.primaryNavy)),
-                    Text(provider.getSubscriptionPeriod(package),
-                        style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                  ],
-                ),
-                const SizedBox(width: 8),
-                // Button
-                ElevatedButton(
-                  onPressed: () => _purchasePackage(context, provider, package),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: trialText != null ? trialColor : AppTheme.accentGreen,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                  child: Text(trialText != null ? 'Try Free' : 'Select'),
-                ),
-              ],
-            ),
-          ),
-        ),
 
-        // Badge floats above the card border
-        if (showBadge)
-          Positioned(
-            top: -9,
-            left: isBadgeOnRight ? null : 10,
-            right: isBadgeOnRight ? 10 : null,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: effectiveColor,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                effectiveBadge!,
-                style: const TextStyle(
-                    fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+                  const SizedBox(width: 8),
+
+                  // ── Button ──────────────────────────────────────────────────
+                  ElevatedButton(
+                    onPressed: btnDisabled
+                        ? null
+                        : () => _purchasePackage(context, provider, package),
+                    style: ElevatedButton.styleFrom(
+                      // Use disabledBackgroundColor so the colour is visible even
+                      // when the button is disabled (Flutter greys it out otherwise)
+                      backgroundColor: btnColor,
+                      disabledBackgroundColor: btnColor.withOpacity(0.6),
+                      disabledForegroundColor: Colors.white70,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                    ),
+                    child: Text(btnLabel),
+                  ),
+                ],
               ),
             ),
           ),
-      ],
+
+          // Badge floats above the card border
+          if (showBadge)
+            Positioned(
+              top: -9,
+              left: isBadgeOnRight ? null : 10,
+              right: isBadgeOnRight ? 10 : null,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: effectiveColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  effectiveBadge!,
+                  style: const TextStyle(
+                      fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
+  }
+
+  String _getOriginalPriceString(Package package, String title) {
+    String priceString = package.storeProduct.priceString;
+    String numericPart = priceString.replaceAll(',', '').replaceAll(RegExp(r'[^0-9.]'), '');
+    double currentPrice = double.tryParse(numericPart) ?? 0;
+    int originalPrice = (currentPrice * 1.5).round();
+    String currencySymbol = priceString.replaceAll(RegExp(r'[0-9.,]'), '').trim();
+    return 'was $currencySymbol $originalPrice';
   }
 
   Future<void> _handleRestore(BuildContext context, SubscriptionProvider provider) async {

@@ -468,7 +468,7 @@ class _TodayTipsScreenState extends State<TodayTipsScreen> {
                               ),
                               const SizedBox(height: 8),
                               const Text(
-                                'Predictions are for entertainment purposes only. Please gamble responsibly.',
+                                'Predictions are for entertainment purposes only. Please use them responsibly.',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey,

@@ -15,7 +15,7 @@ extension TipTypeExtension on TipType {
   String get title {
     switch (this) {
       case TipType.betOfTheDay:
-        return 'BET OF THE DAY';
+        return 'TIP OF THE DAY';
       case TipType.megaAccumulator:
         return 'MEGA ACCUMULATOR';
       case TipType.bttsAndWin:
