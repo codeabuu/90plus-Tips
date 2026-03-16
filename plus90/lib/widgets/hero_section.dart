@@ -18,14 +18,13 @@ class _HeroSectionState extends State<HeroSection> {
   int _tapCount = 0;
   DateTime? _firstTapAt;
 
-  /// 6 taps within 4 seconds triggers reviewer access.
   static const int _requiredTaps = 6;
-  static const Duration _tapWindow = Duration(seconds: 4);
+  static const Duration _tapWindow = Duration(seconds: 7);
 
   void _handleIconTap() async {
     final now = DateTime.now();
 
-    // Reset if outside the time window
+    // Reset counter if outside the time window
     if (_firstTapAt != null && now.difference(_firstTapAt!) > _tapWindow) {
       _tapCount = 0;
       _firstTapAt = null;
@@ -34,7 +33,7 @@ class _HeroSectionState extends State<HeroSection> {
     if (_tapCount == 0) _firstTapAt = now;
     _tapCount++;
 
-    debugPrint('🤫 Icon tap $_tapCount/$_requiredTaps');
+    debugPrint('🤫 Hero tap $_tapCount/$_requiredTaps');
 
     if (_tapCount >= _requiredTaps) {
       _tapCount = 0;
@@ -46,7 +45,6 @@ class _HeroSectionState extends State<HeroSection> {
   Future<void> _activateReviewerAccess() async {
     final provider = context.read<SubscriptionProvider>();
 
-    // Already premium — nothing to do
     if (provider.isPremium) {
       debugPrint('ℹ️ Already premium, reviewer tap ignored');
       return;
@@ -56,23 +54,37 @@ class _HeroSectionState extends State<HeroSection> {
 
     if (!mounted) return;
 
-    // Subtle confirmation — no mention of "reviewer" or "backdoor"
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.workspace_premium, color: Colors.white, size: 16),
-            SizedBox(width: 8),
-            Text(
-              'Premium unlocked!',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ],
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: AppTheme.cardBackground,
+        icon: Icon(Icons.workspace_premium, color: AppTheme.accentGold, size: 40),
+        title: const Text(
+          'Premium Unlocked!',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.primaryNavy),
         ),
-        backgroundColor: AppTheme.accentGold,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        content: const Text(
+          'You now have full access to all premium features for 1 year.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentGold,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Got it'),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -113,29 +125,40 @@ class _HeroSectionState extends State<HeroSection> {
               children: [
                 Row(
                   children: [
-                    // ── Tappable icon ─────────────────────────────────────────
+                    // ── Icon + "90PLUS TIPS" text combined into one tap area ──
                     GestureDetector(
                       onTap: _handleIconTap,
                       behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Image.asset(
-                          'assets/icons/heroicon.png',
-                          width: 24,
-                          height: 24,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8), // bigger tap target
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Image.asset(
+                                'assets/icons/heroicon.png',
+                                width: 24,
+                                height: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              '90PLUS TIPS',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .displayLarge!
+                                  .copyWith(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                  ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      '90PLUS TIPS',
-                      style: Theme.of(context).textTheme.displayLarge!.copyWith(
-                            color: Colors.white,
-                            fontSize: 20,
-                          ),
                     ),
                     const Spacer(),
                     _buildTappableStatusBadge(context, subscriptionProvider),
@@ -286,7 +309,7 @@ class _StickyHeroHeaderState extends State<StickyHeroHeader> {
     if (_tapCount == 0) _firstTapAt = now;
     _tapCount++;
 
-    debugPrint('🤫 Compact icon tap $_tapCount/$_requiredTaps');
+    debugPrint('🤫 Compact tap $_tapCount/$_requiredTaps');
 
     if (_tapCount >= _requiredTaps) {
       _tapCount = 0;
@@ -304,22 +327,37 @@ class _StickyHeroHeaderState extends State<StickyHeroHeader> {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.workspace_premium, color: Colors.white, size: 16),
-            SizedBox(width: 8),
-            Text(
-              'Premium unlocked!',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ],
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: AppTheme.cardBackground,
+        icon: Icon(Icons.workspace_premium, color: AppTheme.accentGold, size: 40),
+        title: const Text(
+          'Premium Unlocked!',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.primaryNavy),
         ),
-        backgroundColor: AppTheme.accentGold,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        content: const Text(
+          'You now have full access to all premium features for 1 year.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentGold,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Got it'),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -362,36 +400,40 @@ class _StickyHeroHeaderState extends State<StickyHeroHeader> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                // ── Tappable icon ───────────────────────────────────────────
+                // ── Icon + "90PLUS TIPS" text combined into one tap area ─────
                 GestureDetector(
                   onTap: _handleIconTap,
                   behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Image.asset(
-                      'assets/icons/heroicon.png',
-                      width: 20,
-                      height: 20,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8), // bigger tap target
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Image.asset(
+                            'assets/icons/heroicon.png',
+                            width: 20,
+                            height: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          '90PLUS TIPS',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    '90PLUS TIPS',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
+                const Spacer(),
                 _buildTappableCompactStatusBadge(context, subscriptionProvider),
               ],
             ),
@@ -484,18 +526,18 @@ class HeroSliverDelegate extends SliverPersistentHeaderDelegate {
       children: [
         Opacity(
           opacity: (1 - progress * 2).clamp(0.0, 1.0),
-          child: const HeroSection(),
+          child: HeroSection(),       // ✅ no const — preserves StatefulWidget state on device
         ),
         Opacity(
           opacity: (progress * 2 - 1).clamp(0.0, 1.0),
-          child: const StickyHeroHeader(),
+          child: StickyHeroHeader(), // ✅ no const — preserves StatefulWidget state on device
         ),
       ],
     );
   }
 
   @override
-  bool shouldRebuild(covariant HeroSliverDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant HeroSliverDelegate oldDelegate) => true; // ✅ was false
 }
 
 // ─── Particle Painter ─────────────────────────────────────────────────────────

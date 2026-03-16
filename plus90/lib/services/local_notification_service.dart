@@ -53,145 +53,18 @@ class LocalNotificationService {
       tz.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation('Europe/London'));
 
-      // Request permissions
+      // Request permissions only (no exact alarm permission needed)
       await _requestPermissions();
-      
-      // Request exact alarm permission for Android 12+
-      await _requestExactAlarmPermission();
 
       // Schedule all notifications
       await _scheduleAllNotifications();
-      
-      // COMMENTED OUT: Test methods
-      // await _runNotificationTests();
-      
+
       _isInitialized = true;
       print('✅ LocalNotificationService initialized successfully');
     } catch (e) {
       print('❌ Error initializing LocalNotificationService: $e');
     }
   }
-  
-  // COMMENTED OUT: All test methods below
-  /*
-  Future<void> _runNotificationTests() async {
-    print('🧪 ===== RUNNING NOTIFICATION TESTS =====');
-    
-    // Test 1: Immediate notification
-    await _testImmediateNotification();
-    
-    // Test 2: Schedule for 1 minute from now
-    await _testScheduledNotification();
-    
-    // Test 3: Check all pending notifications
-    await _checkPendingNotifications();
-    
-    print('🧪 ===== TESTS COMPLETE =====');
-  }
-
-  // 🔴 Test 1: Immediate notification
-  Future<void> _testImmediateNotification() async {
-    print('🧪 Test 1: Sending immediate notification...');
-    
-    try {
-      await _notifications.show(
-        id: 999991,
-        title: '🔔 TEST: Immediate',
-        body: 'This notification should appear NOW!',
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'test_channel',
-            'Test Channel',
-            channelDescription: 'For testing notifications',
-            importance: Importance.high,
-            priority: Priority.high,
-            enableVibration: true,
-            playSound: true,
-          ),
-          iOS: DarwinNotificationDetails(
-            sound: 'default',
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
-        ),
-        payload: 'test_immediate',
-      );
-      print('✅ Test 1: Immediate notification sent');
-    } catch (e) {
-      print('❌ Test 1 failed: $e');
-    }
-  }
-
-  // 🔴 Test 2: Scheduled notification (1 minute)
-  Future<void> _testScheduledNotification() async {
-    final testTime = DateTime.now().add(const Duration(minutes: 1));
-    print('🧪 Test 2: Scheduling notification for: $testTime');
-    
-    try {
-      final ukLocation = tz.getLocation('Europe/London');
-      final tzTestTime = tz.TZDateTime(
-        ukLocation,
-        testTime.year, testTime.month, testTime.day,
-        testTime.hour, testTime.minute,
-      );
-
-      await _notifications.zonedSchedule(
-        id: 999992,
-        title: '⏰ TEST: 1 Minute',
-        body: 'This should appear 1 minute after scheduling',
-        scheduledDate: tzTestTime,
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'test_channel',
-            'Test Channel',
-            channelDescription: 'For testing notifications',
-            importance: Importance.high,
-            priority: Priority.high,
-            enableVibration: true,
-            playSound: true,
-          ),
-          iOS: DarwinNotificationDetails(
-            sound: 'default',
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        payload: 'test_scheduled',
-      );
-      print('✅ Test 2: Scheduled notification set for ${testTime.toString()}');
-    } catch (e) {
-      print('❌ Test 2 failed: $e');
-    }
-  }
-
-  // 🔴 Test 3: Check pending notifications
-  Future<void> _checkPendingNotifications() async {
-    print('🧪 Test 3: Checking pending notifications...');
-
-    try {
-      final pending = await _notifications.pendingNotificationRequests();
-
-      if (pending.isEmpty) {
-        print('📭 No pending notifications');
-        return;
-      }
-
-      print('📋 Total pending: ${pending.length}');
-
-      for (var notification in pending) {
-        print('  - ID: ${notification.id}');
-        print('    Title: ${notification.title}');
-        print('    Body: ${notification.body}');
-        print('    Payload: ${notification.payload}');
-      }
-    } catch (e) {
-      print('⚠️ Pending notification check skipped: $e');
-    }
-  }
-  */
 
   Future<void> _requestPermissions() async {
     final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
@@ -205,24 +78,6 @@ class LocalNotificationService {
       badge: true,
       sound: true,
     );
-  }
-  
-  // Request exact alarm permission for Android 12+
-  Future<void> _requestExactAlarmPermission() async {
-    final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-
-    if (androidPlugin != null) {
-      final granted = await androidPlugin.requestExactAlarmsPermission();
-
-      if (granted == true) {
-        print('✅ Exact alarm permission GRANTED');
-      } else {
-        print('❌ Exact alarm permission DENIED');
-      }
-    } else {
-      print('⚠️ Android plugin not available');
-    }
   }
 
   void _handleNotificationTap(String? payload) {
@@ -594,7 +449,7 @@ class LocalNotificationService {
       body: body,
       scheduledDate: scheduledTime,
       notificationDetails: platformDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle, // ✅ No special permission needed
       payload: payload,
     );
     
