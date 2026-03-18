@@ -13,6 +13,7 @@ import 'homescreen2.dart';
 import '../widgets/dotanimate.dart';
 import '../screens/termsnconds.dart';
 import '../screens/privacypolicy.dart';
+import 'successrate_screen.dart';
 
 // Simplified countdown timer - no box, just text in gray
 class LoadingCountdown extends StatefulWidget {
@@ -599,28 +600,52 @@ class TrustSignalSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 16),
-    child: Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.verified, size: 28, color: AppTheme.accentGreen),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Verified Accuracy', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.primaryNavy)),
-                SizedBox(height: 2),
-                Text('All predictions tracked transparently', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              ],
-            ),
+    child: GestureDetector(
+      onTap: () {
+        // Navigate to success rates screen
+        // Replace SuccessRatesScreen with your actual screen name
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const SuccessRatesScreen(),
           ),
-        ],
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.verified, size: 28, color: AppTheme.accentGreen),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Verified Accuracy',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.primaryNavy),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'All predictions tracked transparently',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            // Add a subtle hint that this is tappable
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 14,
+              color: Colors.grey[400],
+            ),
+          ],
+        ),
       ),
     ),
   );

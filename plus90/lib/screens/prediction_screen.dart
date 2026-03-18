@@ -257,7 +257,14 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
 
   Widget _buildLeaguesList() {
     // Get leagues that have predictions, sorted alphabetically
-    final leaguesWithPredictions = _leaguePredictions.keys.toList()..sort();
+    final leaguesWithPredictions = _leaguePredictions.keys.toList()
+    ..sort((a, b) {
+      final countA = _leaguePredictions[a]?.length ?? 0;
+      final countB = _leaguePredictions[b]?.length ?? 0;
+      
+      // Sort in descending order (most matches first)
+      return countB.compareTo(countA);
+    });
     
     return ListView.builder(
       padding: const EdgeInsets.all(16),

@@ -25,7 +25,7 @@ class _SuccessRatesScreenState extends State<SuccessRatesScreen> with SingleTick
     ),
     SuccessStat(
       category: 'Multi Combinations',
-      successRate: 94.2,
+      successRate: 99.2,
       icon: Icons.layers,
       color: const Color(0xFF2196F3),
       totalTips: 850,
@@ -34,7 +34,7 @@ class _SuccessRatesScreenState extends State<SuccessRatesScreen> with SingleTick
     ),
     SuccessStat(
       category: 'BTTS & Win',
-      successRate: 91.8,
+      successRate: 98.9,
       icon: Icons.swap_horiz,
       color: const Color(0xFF2196F3),
       totalTips: 720,
@@ -42,7 +42,7 @@ class _SuccessRatesScreenState extends State<SuccessRatesScreen> with SingleTick
     ),
     SuccessStat(
       category: 'BTTS',
-      successRate: 88.5,
+      successRate: 98.9,
       icon: Icons.sync_alt,
       color: const Color(0xFF2196F3),
       totalTips: 1100,
@@ -50,7 +50,7 @@ class _SuccessRatesScreenState extends State<SuccessRatesScreen> with SingleTick
     ),
     SuccessStat(
       category: 'Over 2.5 Goals',
-      successRate: 86.3,
+      successRate: 98.7,
       icon: Icons.trending_up,
       color: const Color(0xFFFF9800),
       totalTips: 950,
@@ -58,7 +58,7 @@ class _SuccessRatesScreenState extends State<SuccessRatesScreen> with SingleTick
     ),
     SuccessStat(
       category: 'Premier League',
-      successRate: 89.7,
+      successRate: 99.0,
       icon: Icons.emoji_events,
       color: const Color(0xFF6C0BA9),
       totalTips: 680,
@@ -66,7 +66,7 @@ class _SuccessRatesScreenState extends State<SuccessRatesScreen> with SingleTick
     ),
     SuccessStat(
       category: 'La Liga',
-      successRate: 88.9,
+      successRate: 99.0,
       icon: Icons.emoji_events,
       color: const Color(0xFFDC2A2A),
       totalTips: 590,
@@ -74,7 +74,7 @@ class _SuccessRatesScreenState extends State<SuccessRatesScreen> with SingleTick
     ),
     SuccessStat(
       category: 'Serie A',
-      successRate: 87.2,
+      successRate: 97.9,
       icon: Icons.emoji_events,
       color: const Color(0xFF0066CC),
       totalTips: 520,
@@ -82,7 +82,7 @@ class _SuccessRatesScreenState extends State<SuccessRatesScreen> with SingleTick
     ),
     SuccessStat(
       category: 'Bundesliga',
-      successRate: 86.8,
+      successRate: 97.9,
       icon: Icons.emoji_events,
       color: const Color(0xFFD30505),
       totalTips: 480,
@@ -558,7 +558,7 @@ Widget _buildStatCard(SuccessStat stat, int index) {
                     ),
                   ),
                   Text(
-                    '${stat.successRate.toStringAsFixed(0)}%',
+                    '${stat.successRate.toStringAsFixed(1)}%',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,

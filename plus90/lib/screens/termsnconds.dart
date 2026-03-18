@@ -276,7 +276,7 @@ class TermsScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'support@scorewise.com',
+                                  'help.90plus@outlook.com',
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: Colors.blue[700],

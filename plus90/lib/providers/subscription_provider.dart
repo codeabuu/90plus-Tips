@@ -261,6 +261,8 @@ class SubscriptionProvider with ChangeNotifier {
     return null;
   }
 
+  /// True if user is currently in a free trial period
+
   bool hasActiveTrial() => _revenueCat.hasActiveTrial();
   bool isSubscriptionCancelled() => _revenueCat.isSubscriptionCancelled();
   int? getDaysUntilExpiration() => _revenueCat.getDaysUntilExpiration();

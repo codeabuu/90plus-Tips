@@ -171,16 +171,8 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
             _buildContactMethod(
               icon: Icons.email,
               title: 'Email Support',
-              subtitle: 'support@premiumpredictions.com',
+              subtitle: 'help.90plus@outlook.com',
               action: 'Response time: Under 12 hours',
-            ),
-            const SizedBox(height: 24),
-
-            _buildContactMethod(
-              icon: Icons.message,
-              title: 'In-App Support',
-              subtitle: 'Send us a message directly',
-              action: 'Direct to our support team',
             ),
             const SizedBox(height: 24),
 
@@ -396,45 +388,46 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
   }
 
   Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isSubmitting = true;
-      });
+  if (_formKey.currentState!.validate()) {
+    setState(() {
+      _isSubmitting = true;
+    });
 
-      // TODO: Update your ApiService to handle file attachments
-      // For now, just send the text message
-      final success = await _apiService.submitContactMessage(
-        name: _nameController.text,
-        email: _emailController.text,
-        category: _selectedCategory,
-        message: _messageController.text,
-        // file: _selectedFile, // Add this when ApiService is updated
+    // Add the identifier to the message
+    final String originalMessage = _messageController.text;
+    final String messageWithIdentifier = "[90plus tips] $originalMessage";
+
+    final success = await _apiService.submitContactMessage(
+      name: _nameController.text,
+      email: _emailController.text,
+      category: _selectedCategory,
+      message: messageWithIdentifier, // Send the modified message
+      // file: _selectedFile, // Add this when ApiService is updated
+    );
+
+    setState(() {
+      _isSubmitting = false;
+      _isSuccess = success;
+    });
+
+    if (success) {
+      _messageController.clear();
+      _removeFile();
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) {
+          setState(() {
+            _isSuccess = false;
+          });
+        }
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to send message. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
       );
-
-      setState(() {
-        _isSubmitting = false;
-        _isSuccess = success;
-      });
-
-      if (success) {
-        _messageController.clear();
-        _removeFile(); // Clear attached file
-        // Auto-clear form after success
-        Future.delayed(const Duration(seconds: 5), () {
-          if (mounted) {
-            setState(() {
-              _isSuccess = false;
-            });
-          }
-        });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to send message. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
   }
+}
 }
