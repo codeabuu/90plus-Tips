@@ -1,3 +1,4 @@
+// Updated homescreen.dart with OfflineDetector
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -12,6 +13,7 @@ import '../widgets/notification_reminder_dialog.dart';
 import '../models/league_model.dart';
 import '../providers/subscription_provider.dart';
 import '../widgets/upgrade_modal.dart';
+import '../widgets/offline_detector.dart'; // Import the new widget
 import 'dart:convert';
 
 // Import other parts
@@ -59,11 +61,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _cache.init();
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PredictionsProvider>().fetchAllPredictions();
-      _updateUserActivity();
-      
-      // Check permission status after app loads
-      _checkInitialNotificationStatus();
+      // Initial data load
+      _loadInitialData();
     });
   }
 
@@ -73,6 +72,53 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  // Load initial data (will be called when online)
+  Future<void> _loadInitialData() async {
+    final isConnected = await context.isConnected();
+    
+    if (isConnected) {
+      context.read<PredictionsProvider>().fetchAllPredictions();
+      _updateUserActivity();
+      _checkInitialNotificationStatus();
+    }
+  }
+
+  // Handle coming back online
+  Future<void> _handleBackOnline() async {
+    print('🔄 Back online - refreshing data...');
+    
+    // Refresh all data
+    final predictionsProvider = context.read<PredictionsProvider>();
+    await predictionsProvider.fetchAllPredictions();
+    
+    // Refresh free tips if expanded
+    if (_isFreeTipsExpanded) {
+      await _loadFreeTips(forceRefresh: true);
+    }
+    
+    // Update user activity
+    _updateUserActivity();
+    
+    // Check notification status again
+    _checkInitialNotificationStatus();
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ App reconnected and data refreshed!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  // Handle going offline
+  void _handleOffline() {
+    print('📱 App went offline');
+    // You can add additional offline handling here if needed
+  }
+
   // Track app lifecycle
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -80,8 +126,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _updateUserActivity();
       
       // When app resumes, check if we need to show reminder
-      Future.delayed(const Duration(seconds: 1), () {
-        _checkForScheduledReminder();
+      Future.delayed(const Duration(seconds: 1), () async {
+        final isConnected = await context.isConnected();
+        if (isConnected) {
+          _checkForScheduledReminder();
+        }
       });
     }
   }
@@ -96,23 +145,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final status = await Permission.notification.status;
     
     if (status.isGranted) {
-      // Clear any reminders if user has granted
       await NotificationReminderService.clearReminders();
       print('✅ Notifications already granted');
     } 
     else if (status.isDenied) {
-      // This is the first time or user denied before
       print('📝 Notification status: Denied');
       
-      // Check if this is first time (no denial record)
       final prefs = await SharedPreferences.getInstance();
       final lastDenied = prefs.getInt('notification_last_denied');
       
       if (lastDenied == null) {
-        // First time - show system dialog
         _requestSystemPermission();
       } else {
-        // Not first time - just record and check for reminders
         await NotificationReminderService.recordDenial();
       }
     }
@@ -120,7 +164,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       print('🔒 Notifications permanently denied');
     }
     
-    // Check for scheduled reminders after a delay
     Future.delayed(const Duration(seconds: 2), () {
       _checkForScheduledReminder();
     });
@@ -160,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     
     await showDialog(
       context: context,
-      barrierDismissible: false, // Can't dismiss by tapping outside
+      barrierDismissible: false,
       builder: (context) => NotificationReminderDialog(
         reminderCount: reminderCount,
         onEnable: _handleEnableNotifications,
@@ -172,33 +215,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
     
-    // Record that we showed this immediate reminder
     await NotificationReminderService.recordReminderShown();
   }
 
   // Check for scheduled reminders (4/10/30 days later)
   Future<void> _checkForScheduledReminder() async {
-    // Don't show if already granted
     final status = await Permission.notification.status;
     if (status.isGranted) {
       await NotificationReminderService.clearReminders();
       return;
     }
     
-    // Don't show if permanently denied
     if (status.isPermanentlyDenied) return;
-    
-    // Don't show if we're in the middle of something
     if (!mounted) return;
     
-    // Check if we should show a scheduled reminder
     final shouldShow = await NotificationReminderService.shouldShowReminder();
     if (!shouldShow) return;
     
-    // Get reminder count
     final reminderCount = await NotificationReminderService.getReminderCount();
     
-    // Show the reminder dialog
     await showDialog(
       context: context,
       barrierDismissible: true,
@@ -213,7 +248,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
     
-    // Record that we showed this reminder
     await NotificationReminderService.recordReminderShown();
   }
 
@@ -225,34 +259,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // Handle when user clicks "Enable" in our dialog
   Future<void> _handleEnableNotifications() async {
-  final status = await Permission.notification.status;
-  
-  if (status.isDenied) {
-    if (_hasShownSystemDialog) {
-      // Already showed system dialog, just record denial
-      await NotificationReminderService.recordDenial();
-      _showInfoMessage('You can enable notifications in settings');
-    } else {
-      _hasShownSystemDialog = true;
-      final result = await Permission.notification.request();
-      
-      if (result.isGranted) {
-        await NotificationReminderService.clearReminders();
-        _showSuccessMessage('Notifications enabled!');
-        final subscriptionProvider = context.read<SubscriptionProvider>();
-        await _notifications.rescheduleForPremiumStatus(subscriptionProvider.isPremium);
-      } else if (result.isDenied) {
+    final status = await Permission.notification.status;
+    
+    if (status.isDenied) {
+      if (_hasShownSystemDialog) {
         await NotificationReminderService.recordDenial();
-        _showInfoMessage('You can enable notifications later in settings');
-      } else if (result.isPermanentlyDenied) {
-        _openAppSettings();
+        _showInfoMessage('You can enable notifications in settings');
+      } else {
+        _hasShownSystemDialog = true;
+        final result = await Permission.notification.request();
+        
+        if (result.isGranted) {
+          await NotificationReminderService.clearReminders();
+          _showSuccessMessage('Notifications enabled!');
+          final subscriptionProvider = context.read<SubscriptionProvider>();
+          await _notifications.rescheduleForPremiumStatus(subscriptionProvider.isPremium);
+        } else if (result.isDenied) {
+          await NotificationReminderService.recordDenial();
+          _showInfoMessage('You can enable notifications later in settings');
+        } else if (result.isPermanentlyDenied) {
+          _openAppSettings();
+        }
       }
+    } 
+    else if (status.isPermanentlyDenied) {
+      _openAppSettings();
     }
-  } 
-  else if (status.isPermanentlyDenied) {
-    _openAppSettings();
   }
-}
 
   // Open app settings
   Future<void> _openAppSettings() async {
@@ -396,6 +429,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    return OfflineDetector(
+      onOnline: _handleBackOnline,
+      onOffline: _handleOffline,
+      showOfflineDialog: true,
+      autoRefresh: true,
+      child: _buildMainContent(),
+    );
+  }
+
+  Widget _buildMainContent() {
     final predictionsProvider = context.watch<PredictionsProvider>();
     final subscriptionProvider = context.watch<SubscriptionProvider>();
 
@@ -445,7 +488,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     const ResponsibleGamblingFooter(),
                     const SizedBox(height: 32),
                     
-                    // Optional: Add a small persistent reminder banner
                     if (!subscriptionProvider.isPremium) 
                       _buildGentleReminderBanner(),
                   ],

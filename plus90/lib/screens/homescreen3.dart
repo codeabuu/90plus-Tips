@@ -26,7 +26,7 @@ class LoadingCountdown extends StatefulWidget {
 }
 
 class _LoadingCountdownState extends State<LoadingCountdown> {
-  int _secondsRemaining = 13;
+  int _secondsRemaining = 20;
   bool _isCompleted = false;
 
   @override

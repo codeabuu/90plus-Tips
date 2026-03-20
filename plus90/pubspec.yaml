@@ -1,6 +1,6 @@
 name: plus90
 description: "A premium football predictions app."
-version: 1.0.0+18
+version: 1.0.0+19
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -27,6 +27,7 @@ dependencies:
   timezone: ^0.11.0
   flutter_launcher_icons: ^0.14.4
   permission_handler: ^12.0.1
+  connectivity_plus: ^7.0.0
   
   
 
