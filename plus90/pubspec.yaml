@@ -1,6 +1,6 @@
 name: plus90
 description: "A premium football predictions app."
-version: 1.0.0+19
+version: 1.0.0+20
 
 environment:
   sdk: ">=3.0.0 <4.0.0"

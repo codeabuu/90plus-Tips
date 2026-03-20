@@ -430,12 +430,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return OfflineDetector(
-      onOnline: _handleBackOnline,
-      onOffline: _handleOffline,
-      showOfflineDialog: true,
-      autoRefresh: true,
-      child: _buildMainContent(),
-    );
+        onOnline: _handleBackOnline,
+        onOffline: _handleOffline,
+        autoRefresh: true,
+        child: _buildMainContent(),
+);
   }
 
   Widget _buildMainContent() {
