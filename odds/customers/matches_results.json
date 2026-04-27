@@ -1,0 +1,343 @@
+{
+  "timestamp": "2026-04-26 18:45:31",
+  "total": 30,
+  "found": 21,
+  "results": [
+    {
+      "search": "Stade Rennais vs FC Nantes",
+      "team1": "Stade Rennais",
+      "team2": "FC Nantes",
+      "found": false,
+      "result": null
+    },
+    {
+      "search": "Liverpool vs Crystal Palace",
+      "team1": "Liverpool",
+      "team2": "Crystal Palace",
+      "found": true,
+      "result": {
+        "home": "Liverpool",
+        "away": "Crystal Palace",
+        "score": "3-1",
+        "home_score": 3,
+        "away_score": 1
+      }
+    },
+    {
+      "search": "West Ham United vs Everton",
+      "team1": "West Ham United",
+      "team2": "Everton",
+      "found": true,
+      "result": {
+        "home": "West Ham",
+        "away": "Everton",
+        "score": "2-1",
+        "home_score": 2,
+        "away_score": 1
+      }
+    },
+    {
+      "search": "Arsenal vs Newcastle United",
+      "team1": "Arsenal",
+      "team2": "Newcastle United",
+      "found": true,
+      "result": {
+        "home": "Arsenal",
+        "away": "Newcastle",
+        "score": "1-0",
+        "home_score": 1,
+        "away_score": 0
+      }
+    },
+    {
+      "search": "FC Barcelona vs Getafe CF",
+      "team1": "FC Barcelona",
+      "team2": "Getafe CF",
+      "found": true,
+      "result": {
+        "home": "Getafe",
+        "away": "Barcelona",
+        "score": "0-2",
+        "home_score": 0,
+        "away_score": 2
+      }
+    },
+    {
+      "search": "Hamburger SV vs TSG Hoffenheim",
+      "team1": "Hamburger SV",
+      "team2": "TSG Hoffenheim",
+      "found": true,
+      "result": {
+        "home": "Hamburg",
+        "away": "Hoffenheim",
+        "score": "1-2",
+        "home_score": 1,
+        "away_score": 2
+      }
+    },
+    {
+      "search": "Chicago Fire vs Sporting Kansas City",
+      "team1": "Chicago Fire",
+      "team2": "Sporting Kansas City",
+      "found": true,
+      "result": {
+        "home": "Chicago",
+        "away": "Kansas City",
+        "score": "5-0",
+        "home_score": 5,
+        "away_score": 0
+      }
+    },
+    {
+      "search": "Rayo Vallecano vs Real Sociedad",
+      "team1": "Rayo Vallecano",
+      "team2": "Real Sociedad",
+      "found": false,
+      "result": null
+    },
+    {
+      "search": "Angers SCO vs Paris Saint-Germain",
+      "team1": "Angers SCO",
+      "team2": "Paris Saint-Germain",
+      "found": false,
+      "result": null
+    },
+    {
+      "search": "1. FC Cologne vs Bayer Leverkusen",
+      "team1": "1. FC Cologne",
+      "team2": "Bayer Leverkusen",
+      "found": false,
+      "result": null
+    },
+    {
+      "search": "Torino FC vs Inter Milano",
+      "team1": "Torino FC",
+      "team2": "Inter Milano",
+      "found": true,
+      "result": {
+        "home": "Torino",
+        "away": "Inter",
+        "score": "2-2",
+        "home_score": 2,
+        "away_score": 2
+      }
+    },
+    {
+      "search": "FC Lorient vs Strasbourg Alsace",
+      "team1": "FC Lorient",
+      "team2": "Strasbourg Alsace",
+      "found": true,
+      "result": {
+        "home": "Lorient",
+        "away": "Strasbourg",
+        "score": "2-3",
+        "home_score": 2,
+        "away_score": 3
+      }
+    },
+    {
+      "search": "1. FC Heidenheim vs FC St. Pauli",
+      "team1": "1. FC Heidenheim",
+      "team2": "FC St. Pauli",
+      "found": true,
+      "result": {
+        "home": "Heidenheim",
+        "away": "St Pauli",
+        "score": "2-0",
+        "home_score": 2,
+        "away_score": 0
+      }
+    },
+    {
+      "search": "Genoa CFC vs Como 1907",
+      "team1": "Genoa CFC",
+      "team2": "Como 1907",
+      "found": true,
+      "result": {
+        "home": "Genoa",
+        "away": "Como",
+        "score": "0-2",
+        "home_score": 0,
+        "away_score": 2
+      }
+    },
+    {
+      "search": "Atletico Madrid vs Athletic Bilbao",
+      "team1": "Atletico Madrid",
+      "team2": "Athletic Bilbao",
+      "found": false,
+      "result": null
+    },
+    {
+      "search": "Olympique Marseille vs OGC Nice",
+      "team1": "Olympique Marseille",
+      "team2": "OGC Nice",
+      "found": true,
+      "result": {
+        "home": "Marseille",
+        "away": "Nice",
+        "score": "1-1",
+        "home_score": 1,
+        "away_score": 1
+      }
+    },
+    {
+      "search": "Villarreal CF vs RC Celta de Vigo",
+      "team1": "Villarreal CF",
+      "team2": "RC Celta de Vigo",
+      "found": true,
+      "result": {
+        "home": "Villarreal",
+        "away": "Celta Vigo",
+        "score": "2-1",
+        "home_score": 2,
+        "away_score": 1
+      }
+    },
+    {
+      "search": "VfB Stuttgart vs Werder Bremen",
+      "team1": "VfB Stuttgart",
+      "team2": "Werder Bremen",
+      "found": false,
+      "result": null
+    },
+    {
+      "search": "Fulham vs Aston Villa",
+      "team1": "Fulham",
+      "team2": "Aston Villa",
+      "found": true,
+      "result": {
+        "home": "Fulham",
+        "away": "Aston Villa",
+        "score": "1-0",
+        "home_score": 1,
+        "away_score": 0
+      }
+    },
+    {
+      "search": "Borussia Dortmund vs SC Freiburg",
+      "team1": "Borussia Dortmund",
+      "team2": "SC Freiburg",
+      "found": false,
+      "result": null
+    },
+    {
+      "search": "ACF Fiorentina vs Sassuolo Calcio",
+      "team1": "ACF Fiorentina",
+      "team2": "Sassuolo Calcio",
+      "found": true,
+      "result": {
+        "home": "Fiorentina",
+        "away": "Sassuolo",
+        "score": "0-0",
+        "home_score": 0,
+        "away_score": 0
+      }
+    },
+    {
+      "search": "CA Osasuna vs Sevilla FC",
+      "team1": "CA Osasuna",
+      "team2": "Sevilla FC",
+      "found": true,
+      "result": {
+        "home": "Osasuna",
+        "away": "Sevilla",
+        "score": "2-1",
+        "home_score": 2,
+        "away_score": 1
+      }
+    },
+    {
+      "search": "AC Milan vs Juventus Turin",
+      "team1": "AC Milan",
+      "team2": "Juventus Turin",
+      "found": true,
+      "result": {
+        "home": "Milan",
+        "away": "Juventus",
+        "score": "0-0",
+        "home_score": 0,
+        "away_score": 0
+      }
+    },
+    {
+      "search": "Paris FC vs Lille OSC",
+      "team1": "Paris FC",
+      "team2": "Lille OSC",
+      "found": true,
+      "result": {
+        "home": "Paris FC",
+        "away": "Lille",
+        "score": "0-1",
+        "home_score": 0,
+        "away_score": 1
+      }
+    },
+    {
+      "search": "FSV Mainz vs Bayern Munich",
+      "team1": "FSV Mainz",
+      "team2": "Bayern Munich",
+      "found": false,
+      "result": null
+    },
+    {
+      "search": "Le Havre AC vs FC Metz",
+      "team1": "Le Havre AC",
+      "team2": "FC Metz",
+      "found": true,
+      "result": {
+        "home": "Le Havre",
+        "away": "Metz",
+        "score": "4-4",
+        "home_score": 4,
+        "away_score": 4
+      }
+    },
+    {
+      "search": "Wolverhampton Wanderers vs Tottenham Hotspur",
+      "team1": "Wolverhampton Wanderers",
+      "team2": "Tottenham Hotspur",
+      "found": false,
+      "result": null
+    },
+    {
+      "search": "Nashville SC vs Charlotte FC",
+      "team1": "Nashville SC",
+      "team2": "Charlotte FC",
+      "found": true,
+      "result": {
+        "home": "Nashville MLS",
+        "away": "Charlotte FC",
+        "score": "4-2",
+        "home_score": 4,
+        "away_score": 2
+      }
+    },
+    {
+      "search": "DC United vs Orlando City SC",
+      "team1": "DC United",
+      "team2": "Orlando City SC",
+      "found": true,
+      "result": {
+        "home": "DC United",
+        "away": "Orlando City",
+        "score": "3-2",
+        "home_score": 3,
+        "away_score": 2
+      }
+    },
+    {
+      "search": "Seattle Sounders vs FC Dallas",
+      "team1": "Seattle Sounders",
+      "team2": "FC Dallas",
+      "found": true,
+      "result": {
+        "home": "Seattle",
+        "away": "Dallas",
+        "score": "2-1",
+        "home_score": 2,
+        "away_score": 1
+      }
+    }
+  ]
+}

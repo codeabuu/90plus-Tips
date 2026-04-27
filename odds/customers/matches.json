@@ -1,0 +1,124 @@
+{
+  "matches": [
+    {
+      "team1": "Liverpool",
+      "team2": "Crystal Palace"
+    },
+    {
+      "team1": "Arsenal",
+      "team2": "Newcastle United"
+    },
+    {
+      "team1": "Wolverhampton Wanderers",
+      "team2": "Tottenham Hotspur"
+    },
+    {
+      "team1": "West Ham United",
+      "team2": "Everton"
+    },
+    {
+      "team1": "Fulham",
+      "team2": "Aston Villa"
+    },
+    {
+      "team1": "Borussia Dortmund",
+      "team2": "SC Freiburg"
+    },
+    {
+      "team1": "VfB Stuttgart",
+      "team2": "Werder Bremen"
+    },
+    {
+      "team1": "FSV Mainz",
+      "team2": "Bayern Munich"
+    },
+    {
+      "team1": "1. FC Cologne",
+      "team2": "Bayer Leverkusen"
+    },
+    {
+      "team1": "1. FC Heidenheim",
+      "team2": "FC St. Pauli"
+    },
+    {
+      "team1": "Hamburger SV",
+      "team2": "TSG Hoffenheim"
+    },
+    {
+      "team1": "Le Havre AC",
+      "team2": "FC Metz"
+    },
+    {
+      "team1": "Stade Rennais",
+      "team2": "FC Nantes"
+    },
+    {
+      "team1": "Paris FC",
+      "team2": "Lille OSC"
+    },
+    {
+      "team1": "Olympique Marseille",
+      "team2": "OGC Nice"
+    },
+    {
+      "team1": "FC Lorient",
+      "team2": "Strasbourg Alsace"
+    },
+    {
+      "team1": "Angers SCO",
+      "team2": "Paris Saint-Germain"
+    },
+    {
+      "team1": "FC Barcelona",
+      "team2": "Getafe CF"
+    },
+    {
+      "team1": "Atletico Madrid",
+      "team2": "Athletic Bilbao"
+    },
+    {
+      "team1": "Rayo Vallecano",
+      "team2": "Real Sociedad"
+    },
+    {
+      "team1": "CA Osasuna",
+      "team2": "Sevilla FC"
+    },
+    {
+      "team1": "Villarreal CF",
+      "team2": "RC Celta de Vigo"
+    },
+    {
+      "team1": "AC Milan",
+      "team2": "Juventus Turin"
+    },
+    {
+      "team1": "Torino FC",
+      "team2": "Inter Milano"
+    },
+    {
+      "team1": "Genoa CFC",
+      "team2": "Como 1907"
+    },
+    {
+      "team1": "ACF Fiorentina",
+      "team2": "Sassuolo Calcio"
+    },
+    {
+      "team1": "Chicago Fire",
+      "team2": "Sporting Kansas City"
+    },
+    {
+      "team1": "Nashville SC",
+      "team2": "Charlotte FC"
+    },
+    {
+      "team1": "DC United",
+      "team2": "Orlando City SC"
+    },
+    {
+      "team1": "Seattle Sounders",
+      "team2": "FC Dallas"
+    }
+  ]
+}
